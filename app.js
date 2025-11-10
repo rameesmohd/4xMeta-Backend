@@ -7,6 +7,7 @@ const app = express();
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cookieParser = require("cookie-parser");
+const userRoute = require('./routes/userRoute.js')
 
 dotenv.config();
 connectDB()
@@ -67,8 +68,7 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
-
-app.use('/api',userRoute)
+app.use('/api',userRoute);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -84,4 +84,3 @@ app.use((err, req, res, next) => {
 app.listen(process.env.PORT, () => {
     console.log(`Example app listening at http://localhost:${process.env.PORT}`);
 })
-
