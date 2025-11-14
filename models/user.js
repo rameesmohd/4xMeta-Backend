@@ -1,60 +1,97 @@
 const mongoose = require("mongoose");
 
+const twoDecimalPlaces = (value) => Number(parseFloat(value).toFixed(2));
+
 const userSchema = new mongoose.Schema({
-  user_id: {
+  login_type: {
     type: String,
-    unique: true,
-    required: true,
+    enum: ["telegram", "web"],
+    required: true
   },
+
+  user_id: { type: String, unique: true, sparse: true },
+
+  /* TELEGRAM USERS */
+  telegram: {
+    id: { type: String, unique: true, sparse: true, index: true },
+    username: String,
+    first_name: String,
+    last_name: String,
+    photo_url: String,
+    is_premium: Boolean,
+  },
+
+  /* WEBSITE USERS */
   email: {
     type: String,
-    set: (v) => v.toLowerCase(),
+    lowercase: true,
+    sparse: true,
+    index: true,
   },
-  first_name: {
-    type: String,
-    required: true,
-  },
-  last_name: {
-    type: String,
-    default: "",
-  },
-  username: {
-    type: String,
-    default: "",
-  },
-  is_verified: {
-    type: Boolean,
-    default: false,
-  },
-  join_date: {
-    type: Date,
-    default: Date.now,
-  },
-  start_date: {
-    type: Date,
-    default: Date.now,
-  },
-  is_upgraded: {
-    type: Boolean,
-    default: false,
-  },
-  ip_address: {
-    type: String,
-  },
-  is_blocked: {
-    type: Boolean,
-    default: false,
-  },
-  token: {
-    type: String,
-    default: "",
-  },
-});
+  password: { type: String },
 
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ user_id: 1 });
-userSchema.index({ join_date: -1 });
-userSchema.index({ ip_address: 1 });
+  first_name: String,
+  last_name: String,
+  mobile: String,
+  country: String,
+  country_code: String,
+  date_of_birth: Date,
 
-const userModel = mongoose.model("users", userSchema);
-module.exports = userModel;
+  /* STATUS FLAGS */
+  is_blocked: { type: Boolean, default: false },
+
+  /* KYC */
+  kyc: {
+    is_email_verified: { type: Boolean, default: false },
+    is_verified: { type: Boolean, default: false },
+    step: { type: Number, default: 0, min: 0, max: 4 },
+    identify_proof: [String],
+    identify_proof_status: { type: String, enum: ["submitted", "verified", "unavailable"], default: "unavailable" },
+    residential_proof: [String],
+    residential_proof_status: { type: String, enum: ["submitted", "verified", "unavailable"], default: "unavailable" },
+  },
+
+  /* WALLETS */
+  wallets: {
+    main_id: {
+      type: String,
+      default: () => Math.random().toString(36).substring(2, 10).toUpperCase(),
+      unique: true,
+      index: true
+    },
+    main: { type: Number, default: 0, set: twoDecimalPlaces },
+    
+    rebate_id: {
+      type: String,
+      default: () => Math.random().toString(36).substring(2, 10).toUpperCase(),
+      unique: true,
+      index: true
+    },
+    rebate: { type: Number, default: 0, set: twoDecimalPlaces },
+  },
+
+  /* REFERRALS */
+  referral: {
+    total_earned_commission: { type: Number, default: 0, set: twoDecimalPlaces },
+    total_referrals: { type: Number, default: 0 },
+    referred_by: { type: mongoose.Schema.Types.ObjectId, ref: "users" },
+    referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: "users" }],
+    investments: [
+      {
+        investment_id: { type: mongoose.Schema.Types.ObjectId, ref: "investments" },
+        rebate_recieved: { type: Number, default: 0, set: twoDecimalPlaces }
+      }
+    ]
+  },
+
+  token : String
+}, { timestamps: true });
+
+/* PERFORMANCE INDEXES */
+userSchema.index({ login_type: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ "telegram.id": 1 });
+userSchema.index({ "referral.referred_by": 1 });
+userSchema.index({ "wallets.main": -1 });
+
+module.exports = mongoose.model("users", userSchema);

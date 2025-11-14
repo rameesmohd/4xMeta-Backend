@@ -8,21 +8,25 @@ const createToken = (userId) => {
     );
 };
 
-const fetchUser = async (req, res) => {
+const teleUser = async (req, res) => {
   try {
-    const { id, first_name, last_name, username } = req.body;
+    const { id, first_name, last_name, username, photo_url, is_premium } = req.body;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Missing Telegram user ID" });
+      return res.status(400).json({
+        success: false,
+        message: "Missing Telegram user ID",
+      });
     }
 
+    // 🔍 Find existing Telegram user
     let user = await userModel.findOne({ user_id: id });
 
-    // Generate token
+    // Create token
     const token = createToken(id);
 
+    /* ------------------- EXISTING USER ------------------- */
     if (user) {
-      // Update token every login
       user.token = token;
       await user.save();
 
@@ -31,8 +35,10 @@ const fetchUser = async (req, res) => {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-          ...(process.env.NODE_ENV === "production" && { domain: process.env.DOMAIN }),
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          ...(process.env.NODE_ENV === "production" && {
+            domain: process.env.DOMAIN,
+          }),
+          maxAge: 7 * 24 * 60 * 60 * 1000,
         })
         .status(200)
         .json({
@@ -42,14 +48,19 @@ const fetchUser = async (req, res) => {
         });
     }
 
-    // Create new user if not found
+    /* ------------------- NEW USER CREATION ------------------- */
     const newUser = new userModel({
+      login_type: "telegram",
+      telegram: {
+        id,
+        first_name,
+        last_name,
+        username,
+        photo_url,
+        is_premium,
+      },
       user_id: id,
-      first_name,
-      last_name,
-      username,
-      token, // save token here
-      join_date: new Date(),
+      token,
     });
 
     await newUser.save();
@@ -59,23 +70,30 @@ const fetchUser = async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-        ...(process.env.NODE_ENV === "production" && { domain: process.env.DOMAIN }),
+        ...(process.env.NODE_ENV === "production" && {
+          domain: process.env.DOMAIN,
+        }),
         maxAge: 7 * 24 * 60 * 60 * 1000,
       })
       .status(200)
       .json({
         success: true,
-        message: "New user created successfully",
+        message: "New Telegram user created successfully",
         data: newUser,
       });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Telegram login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
+
 module.exports = {
-    fetchUser,
+    teleUser,
 }
 
 
