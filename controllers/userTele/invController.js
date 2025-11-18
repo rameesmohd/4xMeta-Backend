@@ -166,7 +166,9 @@ const makeInvestment = async (req, res) => {
 
   try {
     await session.withTransaction(async () => {
-      const { managerId, amount, ref } = req.body;
+      const { managerId, amount : rawAmt, ref } = req.body;
+      const parsed = Number(rawAmt);
+      const amount = Math.floor(parsed * 100) / 100;
       const userId = req.user._id;
 
       if (!userId || !managerId || !amount || amount <= 0) {
@@ -180,6 +182,7 @@ const makeInvestment = async (req, res) => {
       ]);
 
       if (!user || !manager) throw new Error("User or manager not found");
+
 
       // Validate balance
       if (amount > user.wallets.main)
@@ -201,57 +204,63 @@ const makeInvestment = async (req, res) => {
       // Generate investment ID
       const invCount = await investmentModel.countDocuments().session(session);
 
-      // Find inviter
-      let inviter = null;
-      if (ref) {
-        inviter = await userModel.findOne({ user_id: ref }).session(session);
-      } else if (user.referral?.referred_by) {
-        inviter = await userModel.findById(user.referral.referred_by).session(session);
-      }
+      //Check already existed
+      let investment = await investmentModel.findOne({user :user._id ,manager : manager._id })
+      
+      if(!investment){
+          // Find inviter
+          let inviter = null;
+          if (ref) {
+            inviter = await userModel.findOne({ user_id: ref }).session(session);
+          } else if (user.referral?.referred_by) {
+            inviter = await userModel.findById(user.referral.referred_by).session(session);
+          }
+          // Create Investment Entry
+          const [newInvestment] = await investmentModel.create(
+            [
+              {
+                inv_id: 21234 + invCount,
+                user: user._id,
+                manager: manager._id,
+                manager_nickname: manager.nickname,
 
-      // Create Investment Entry
-      const [investment] = await investmentModel.create(
-        [
-          {
-            inv_id: 21000 + invCount,
-            user: user._id,
-            manager: manager._id,
-            manager_nickname: manager.nickname,
+                // Manager settings
+                trading_interval: manager.trading_interval,
+                trading_liquidity_period: manager.trading_liquidity_period,
+                min_initial_investment: manager.min_initial_investment,
+                min_top_up: manager.min_top_up,
+                min_withdrawal: manager.min_withdrawal,
+                manager_performance_fee: manager.performance_fees_percentage,
 
-            // Manager settings
-            trading_interval: manager.trading_interval,
-            trading_liquidity_period: manager.trading_liquidity_period,
-            min_initial_investment: manager.min_initial_investment,
-            min_top_up: manager.min_top_up,
-            min_withdrawal: manager.min_withdrawal,
-            manager_performance_fee: manager.performance_fees_percentage,
+                // Dashboard totals (start empty)
+                total_funds: 0,
+                total_deposit: 0,
+                deposits: [],
 
-            // Dashboard totals (start empty)
-            total_funds: 0,
-            total_deposit: 0,
-            deposits: [],
-
-            // Referral
-            referred_by: inviter ? inviter._id : null,
-          },
-        ],
-        { session }
-      );
-
-      // Referral tracking
-      if (inviter && inviter._id.toString() !== user._id.toString()) {
-        await userModel.findByIdAndUpdate(
-          inviter._id,
-          {
-            $push: {
-              "referral.investments": {
-                investment_id: investment._id,
-                rebate_received: 0,
+                // Referral
+                referred_by: inviter ? inviter._id : null,
               },
-            },
-          },
-          { session }
-        );
+            ],
+            { session }
+          );
+
+          investment = newInvestment
+
+          // Referral tracking
+          if (inviter && inviter._id.toString() !== user._id.toString()) {
+            await userModel.findByIdAndUpdate(
+              inviter._id,
+              {
+                $push: {
+                  "referral.investments": {
+                    investment_id: investment._id,
+                    rebate_received: 0,
+                  },
+                },
+              },
+              { session }
+            );
+          }
       }
 
       // Format from/to IDs
@@ -265,11 +274,11 @@ const makeInvestment = async (req, res) => {
             user: user._id,
             investment: investment._id,
             type: "transfer",
-            status: "approved",
+            status: "completed",
             amount,
             from: fromWallet,
             to: toInvestment,
-            comment: `To Manager: ${manager.nickname}`
+            description: `To Manager: ${manager.nickname}`
           },
         ],
         { session }
@@ -287,7 +296,7 @@ const makeInvestment = async (req, res) => {
             amount,
             from: fromWallet,
             to: toInvestment,
-            comment: `Deposit to ${manager.nickname}`,
+            description: `Deposit to ${manager.nickname}`,
           },
         ],
         { session }
@@ -301,6 +310,7 @@ const makeInvestment = async (req, res) => {
       );
 
       return res.status(201).json({
+        status : "success",
         msg: "Investment created successfully",
         investmentId: investment._id,
         result: investment,
@@ -320,13 +330,12 @@ const fetchInvestment=async(req,res)=>{
   try {
     const user = req.user._id
     const manager = req.query.manager
-    const investment = await investmentModel.findOne({user ,manager})
+    const investment = await investmentModel.findOne({user,manager})
 
-     return res.status(201).json({
-        status : "success",
-        msg: "Investment created successfully",
-        result: investment,
-      });
+    return res.status(200).json({
+      status : "success",
+      result: investment,
+    });
   } catch (error) {
     console.error("Investment Error:", error);
     return res.status(500).json({
@@ -335,7 +344,38 @@ const fetchInvestment=async(req,res)=>{
   }
 }
 
+const fetchInvTransactions = async (req, res) => {
+  try {
+    const user = req.user;
+    const { manager } = req.body;
+
+    if ( !manager) {
+      return res.status(400).json({
+        status: "failed",
+        errMsg: "Manager fields are required",
+      });
+    }
+
+    const transactions = await InvestmentTransaction.find({
+      user: user._id,
+      manager,
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      status: "success",
+      result: transactions,
+    });
+  } catch (error) {
+    console.error("Investment Error:", error);
+    return res.status(500).json({
+      errMsg: error.message || "Server error",
+    });
+  }
+};
+
+
 module.exports={
     makeInvestment,
-    fetchInvestment
+    fetchInvestment,
+    fetchInvTransactions
 }

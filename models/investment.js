@@ -55,7 +55,7 @@ const investmentSchema = new mongoose.Schema(
     open_trade_profit: { type: Number, default: 0.0,set: truncateToTwoDecimals },
     closed_trade_profit: { type: Number, default: 0.0 ,set: truncateToTwoDecimals},
 
-    total_funds: { type: Number, required: true ,set: truncateToTwoDecimals}, // Total active funds ( locked and unlocked deposits and profit after performaance fee, In frontend it shows by adding current_interval_profit_equity )
+    total_equity: { type: Number, required: true ,set: truncateToTwoDecimals, default: 0.0}, // Total active funds ( locked and unlocked deposits and profit after performaance fee, In frontend it shows by adding current_interval_profit_equity )
     current_interval_profit: { type: Number, default: 0.0 ,set: truncateToTwoDecimals}, //profit not for deduction of performance fee or withdraw
     current_interval_profit_equity: { type: Number, default: 0.0 ,set: truncateToTwoDecimals}, // real profit equity for deduction of performance fee and withdraw
 

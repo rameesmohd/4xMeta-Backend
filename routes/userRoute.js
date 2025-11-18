@@ -37,4 +37,7 @@ router.route('/invest')
 router.route('/porfolio')
       .get(investment.fetchInvestment)
 
+router.route('/portfolio/history')
+      .post(investment.fetchInvTransactions)
+
 module.exports=router

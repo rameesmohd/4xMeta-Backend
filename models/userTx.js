@@ -43,6 +43,17 @@ const transactionSchema = new Schema({
       min: 0
     },
 
+    // From and To show source/destination reference
+    from: {
+      type: String,
+      default: null,
+    },
+
+    to: {
+      type: String,
+      default: null,
+    },
+
     // OPTIONAL: Investment reference
     investment: {
       type: Schema.Types.ObjectId,
