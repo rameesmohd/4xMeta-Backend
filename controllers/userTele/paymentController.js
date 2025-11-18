@@ -520,6 +520,39 @@ const withdrawFromMainWallet = async (req, res) => {
   }
 };
 
+const fetchAddressBalance = async (req, res) => {
+    try {
+        const { _id } = req.query;
+        const { payment_address, private_key, payment_mode } = await depositsModel.findOne({ _id });
+
+        if (!payment_address || !private_key) {
+            return res.status(400).send("Invalid payment ID");
+        }
+
+        let usdtBalance = "0"; 
+
+        if (payment_mode == "usdt-trc20") {
+            const tronWebInstance = createTronWebInstance(process.env.PRIVATE_KEY);
+            const usdtContract = await initializeUsdtContract(tronWebInstance);
+            
+            const balance = await usdtContract.methods.balanceOf(payment_address).call();
+            usdtBalance = (BigInt(balance) / BigInt(1e6)).toString();
+
+        } else if (payment_mode == "usdt-bep20") {
+            usdtBalance = await getUSDTBEPBalance(payment_address);
+        }
+
+        // Check if balance is zero
+        if (usdtBalance === "0") {
+            return res.status(200).json({ balance: usdtBalance, msg: "No funds available",payment_address,private_key });
+        }
+
+        res.status(200).json({ balance: usdtBalance ,payment_address,private_key});
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ errMsg: "Error fetching balance", error });
+    }
+};
 
 module.exports = { 
     trc20CreateDeposit,
@@ -527,6 +560,8 @@ module.exports = {
     bep20CreateDeposit,
     bep20CheckAndTransferPayment,
 
-    withdrawFromMainWallet
+    withdrawFromMainWallet,
+
+    fetchAddressBalance
 }
 

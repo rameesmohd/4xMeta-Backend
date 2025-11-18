@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cookieParser = require("cookie-parser");
 const userRoute = require('./routes/userRoute.js')
+const masterRoute = require('./routes/masterRoute.js')
 
 dotenv.config();
 connectDB()
@@ -34,7 +35,8 @@ app.set('trust proxy', 1);
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://your-production-domain.com'
+  'https://your-production-domain.com',
+  'http://localhost:3001'
 ];
 
 const corsOptions = {
@@ -68,7 +70,9 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
+app.use('/api/master',masterRoute);
 app.use('/api',userRoute);
+
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
