@@ -179,6 +179,9 @@ const managerSchema = new Schema(
       default: 0,
       set: toTwoDecimals,
     },
+    joined_at : {
+      type : Date
+    }
   },
   { timestamps: true }
 );

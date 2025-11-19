@@ -9,10 +9,11 @@ const { default: mongoose } = require('mongoose');
 const {fetchAndUseLatestRollover} = require('../rolloverController')
 const { buildPaginatedQuery } = require('../../controllers/common/buildPaginationQuery')
 const { sendEmailToUser } = require('../../assets/html/verification')
+const bcrypt = require("bcrypt");
 
 const fetchUser =async(req,res)=>{
     try {
-        const { query, skip, limit } = buildPaginatedQuery(req.query, ['email']);
+        const { query, skip, limit } = buildPaginatedQuery(req.query, ['email user_id']);
     
         // Total count for pagination
         const total = await userModel.countDocuments(query);
@@ -34,16 +35,26 @@ const fetchUser =async(req,res)=>{
     }
 }
 
-const addManager=async(req,res)=>{
-    try {
-        const newManager =  new managerModel(req.body)  
-        await newManager.save()  
-        res.status(201).json({ msg: 'Manager added successfully' });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ errMsg: 'Error adding Manager,please try again' ,error : error.message})
-    }
-}
+const addManager = async (req, res) => {
+  try {
+    const data = req.body;
+
+    // 🔐 Hash password
+    const hashedPassword = await bcrypt.hash(data.password, 12);
+    data.password = hashedPassword;
+
+    const newManager = new managerModel(data);
+    await newManager.save();
+
+    res.status(201).json({ msg: "Manager added successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      errMsg: "Error adding Manager, please try again",
+      error: error.message,
+    });
+  }
+};
 
 const fetchManagers=async(req,res)=>{
     try {
@@ -56,24 +67,42 @@ const fetchManagers=async(req,res)=>{
 }
 
 const updateManager = async (req, res) => {
-    try {
-      const { _id, ...updates } = req.body; // Extract ID and fields to update
-      const Manager = await managerModel.findOneAndUpdate(
-        { _id }, 
-        { $set: updates },  
-        { new: true }       
-      );
-  
-      if (!Manager) {
-        return res.status(404).json({ errMsg: 'Manager not found' });
-      }
-  
-      return res.status(200).json({ result: Manager ,msg : "Manager data updated successfully."});
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ errMsg: 'Error updating Manager, please try again', error: error.message });
+  try {
+    const { _id, password, ...updates } = req.body;
+    console.log(password);
+    console.log("password");
+    console.log(updates);
+    
+
+    
+    // 🔐 If updating password, hash it
+    if (password) {
+      updates.password = await bcrypt.hash(password, 12);
     }
+
+    const Manager = await managerModel.findOneAndUpdate(
+      { _id },
+      { $set: updates },
+      { new: true }
+    );
+
+    if (!Manager) {
+      return res.status(404).json({ errMsg: "Manager not found" });
+    }
+
+    return res.status(200).json({
+      result: Manager,
+      msg: "Manager data updated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      errMsg: "Error updating Manager, please try again",
+      error: error.message,
+    });
+  }
 };
+
 
 const masterLogin = async (req, res) => {
   try {
@@ -135,18 +164,29 @@ const masterLogin = async (req, res) => {
 
 const masterLogout = (req, res) => {
   try {
-    res.clearCookie("master_token");
+    res.clearCookie("masterToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      path: "/api/master",
+      ...(process.env.NODE_ENV === "production" && {
+            domain: process.env.DOMAIN,
+      }),
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    })
+
     return res.status(200).json({
       success: true,
       msg: "Master logged out successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       errMsg: "Logout failed",
       error: error.message,
     });
   }
 };
+
 
 const fetchDeposits=async(req,res)=>{
     try {
@@ -171,7 +211,7 @@ const fetchDeposits=async(req,res)=>{
         // Paginated results
         const deposits = await depositModel
             .find(query, { private_key: 0, payment_address: 0 })
-            .populate({ path: 'user', select: 'email first_name last_name' })
+            .populate({ path: 'user', select: 'login_type telegram email first_name last_name' })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -189,7 +229,8 @@ const fetchDeposits=async(req,res)=>{
         const totalDepositedAmount = totalAmountAgg[0]?.totalDepositedAmount || 0;
 
         return res.status(200).json({
-            result : deposits,total, 
+            result : deposits,
+            total, 
             currentPage: page,
             totalDepositedAmount
         })
@@ -221,7 +262,7 @@ const fetchWithdrawals=async(req,res)=>{
 
         const withdrawals =  await withdrawModel
         .find(query)
-        .populate({ path: "user", select: "email first_name last_name" })
+        .populate({ path: "user", select: "login_type telegram email first_name last_name" })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -515,5 +556,7 @@ module.exports = {
     sendEmail,
 
     fetchHelpRequests,
-    changeHelpRequestStatus
+    changeHelpRequestStatus,
+
+    masterLogout
 }

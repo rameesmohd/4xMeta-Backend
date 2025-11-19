@@ -16,7 +16,8 @@ const {
         fetchHelpRequests,
         changeHelpRequestStatus,
         changeUserEmail,
-        sendEmail
+        sendEmail,
+        masterLogout
     } =require('../controllers/master/masterController')
 const { fetchAddressBalance } = require('../controllers/userTele/paymentController')
 const {verifyToken} = require('../middlewares/masterAuth')
@@ -39,20 +40,23 @@ router.route('/manager')
 
 router.route('/deposits')
     .get(fetchDeposits)
+    
 router.get('/fetch-address',fetchAddressBalance)
 
 router.route('/withdrawals')
     .get(fetchWithdrawals)
     .patch(handleWithdraw)
 
-router.route('/kyc-requests')
-    .get(getPendingKYCRequests)
-    .patch(approveKycDocs)
-    .post(approveKyc)
+// router.route('/kyc-requests')
+//     .get(getPendingKYCRequests)
+//     .patch(approveKycDocs)
+//     .post(approveKyc)
 
 router.post('/add-to-wallet',addToWallet)
 router.post('/send-email',sendEmail)
 router.post('/change-email',changeUserEmail)
+
+router.get('/logout',masterLogout)
 
 module.exports= router
 
