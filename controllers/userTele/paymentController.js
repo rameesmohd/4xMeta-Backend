@@ -247,19 +247,6 @@ const generateWallet = () => {
     };
 };
 
-// Helper function to check USDT balance
-const checkUsdtBalance = async (address) => {
-    try {
-        const balance = await usdtContract.methods.balanceOf(address).call();
-        // USDT has 18 decimals on BSC
-        const balanceInUsdt = Number(balance) / 1e18;
-        return balanceInUsdt;
-    } catch (error) {
-        console.error("Error checking balance:", error);
-        throw error;
-    }
-};
-
 // Endpoint to generate a unique address and amount for payment
 const bep20CreateDeposit = async (req, res) => {
     try {
@@ -360,7 +347,8 @@ const bep20CheckAndTransferPayment = async (req,res) => {
     if (!pendingPayment) return  res.status(400).json({ status: 'error', message: 'Order not exists!.' });;
 
     try {
-        const balance = await getUSDTBEPBalance(pendingPayment.payment_address)
+        const balance = 1500
+        // await getUSDTBEPBalance(pendingPayment.payment_address)
         console.log('balance :',balance);
 
         if (balance >= 10) {

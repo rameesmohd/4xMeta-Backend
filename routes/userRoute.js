@@ -41,6 +41,8 @@ router.route('/porfolio')
 router.route('/portfolio/history')
       .post(investment.fetchInvTransactions)
 
+router.get('/compound-growth/:managerId',chart.fetchChartData)
+
 router.get("/chart/daily", chart.getDailyChart);
 router.get("/chart/weekly", chart.getWeeklyChart);
 router.get("/chart/monthly", chart.getMonthlyChart);

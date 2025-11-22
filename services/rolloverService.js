@@ -151,10 +151,8 @@ cron.schedule("0 */4 * * 1-5", () => {
 // 15-minute testing (enable when needed)
 cron.schedule("*/15 * * * *", () => {
   log("🧪 Running test 15min rollover");
+  createRollover("15min");
 });
-createRollover("15min");
-
-
 
 module.exports = {
   createRollover,

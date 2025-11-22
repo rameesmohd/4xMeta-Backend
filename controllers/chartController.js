@@ -1,8 +1,10 @@
 const compountProfitChartModel = require("../models/compoundProfitChart");
 const managerModel = require("../models/manager");
 const dayjs = require("dayjs");
+const isoWeek = require("dayjs/plugin/isoWeek");
+dayjs.extend(isoWeek);
 
-exports.getDailyChart = async (req, res) => {
+const getDailyChart = async (req, res) => {
   try {
     const { manager_id, days = 90 } = req.query;
 
@@ -14,7 +16,7 @@ exports.getDailyChart = async (req, res) => {
     const data = await compountProfitChartModel
       .find({
         manager: manager_id,
-        date: { $gte: start },
+        date: { $lte: new Date(), $gte: start }
       })
       .sort({ date: 1 });
 
@@ -30,7 +32,7 @@ exports.getDailyChart = async (req, res) => {
   }
 };
 
-exports.getWeeklyChart = async (req, res) => {
+const getWeeklyChart = async (req, res) => {
   try {
     const { manager_id, weeks = 12 } = req.query;
 
@@ -44,17 +46,31 @@ exports.getWeeklyChart = async (req, res) => {
       .sort({ date: 1 });
 
     const weekly = {};
+
     for (const row of rows) {
-      const week = dayjs(row.date).format("YYYY-[W]WW");
+      const weekNumber = dayjs(row.date).isoWeek();
+      const year = dayjs(row.date).year();
 
-      if (!weekly[week]) weekly[week] = 1;
+      const weekStart = dayjs(row.date).startOf("isoWeek");
+      const weekEnd = dayjs(row.date).endOf("isoWeek");
 
-      weekly[week] *= 1 + row.value / 100;
+      const readableLabel = `${weekStart.format("MMM D")}–${weekEnd.format("D")}`;
+
+      const key = `${year}-W${String(weekNumber).padStart(2, "0")}`;
+
+      if (!weekly[key]) {
+        weekly[key] = {
+          grow: 1,
+          label: readableLabel,
+        };
+      }
+
+      weekly[key].grow *= 1 + row.value / 100;
     }
 
     const result = Object.keys(weekly).map((key) => ({
-      week: key,
-      value: Number(((weekly[key] - 1) * 100).toFixed(2)),
+      week: weekly[key].label,
+      value: Number(((weekly[key].grow - 1) * 100).toFixed(2)),
     }));
 
     res.json({ manager_id, weeks, data: result });
@@ -64,7 +80,8 @@ exports.getWeeklyChart = async (req, res) => {
   }
 };
 
-exports.getMonthlyChart = async (req, res) => {
+
+const getMonthlyChart = async (req, res) => {
   try {
     const { manager_id, months = 12 } = req.query;
 
@@ -97,3 +114,24 @@ exports.getMonthlyChart = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+const fetchChartData=async(req,res)=>{
+    try {
+        const data = await compountProfitChartModel
+        .find({ manager: req.params.managerId })
+        .sort({ date: 1 })
+        .select({ date: 1, value: 1, _id: 0 });
+        
+        return res.status(200).json({ result : data });
+    } catch (error) {
+        console.error('Error sending email:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+module.exports={
+  fetchChartData,
+  getDailyChart,
+  getWeeklyChart,
+  getMonthlyChart
+}
