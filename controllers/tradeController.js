@@ -270,31 +270,26 @@ const rollOverTradeDistribution = async (rollover_id) => {
       .session(session);
 
     if (!unDistributedTrades.length) {
-      console.log("No undistributed trades found.");
       await session.commitTransaction();
       session.endSession();
-      return 0; // profit distributed
+      return 0;
     }
 
-    // BULK OPERATIONS
     const bulkInvestmentUpdates = [];
     const bulkManagerUpdates = [];
     const bulkTradeUpdates = [];
     const investorTradeRows = [];
 
     let totalProfitDistributed = 0;
-
+    console.log(unDistributedTrades);
+    
     for (const trade of unDistributedTrades) {
       const tradeProfit = toTwoDecimals(trade.manager_profit);
       totalProfitDistributed += tradeProfit;
 
-      // Fetch manager for this trade
       const manager = await managerModel.findById(trade.manager).session(session);
       if (!manager) continue;
 
-      //-------------------------------
-      // FETCH ALL INVESTMENTS FOR MANAGER
-      //-------------------------------
       const investments = await investmentModel
         .find({ manager: manager._id, status: "active" })
         .session(session);
@@ -306,11 +301,8 @@ const rollOverTradeDistribution = async (rollover_id) => {
 
       if (totalFunds <= 0) continue;
 
-      //-------------------------------
-      // PROCESS EACH INVESTMENT
-      //-------------------------------
       for (const investment of investments) {
-        if ((investment.total_equity || 0) < 1) continue;
+        if (investment.total_equity < 1) continue;
 
         const investorProfit = toTwoDecimals(
           (investment.total_equity / totalFunds) * tradeProfit
@@ -320,7 +312,6 @@ const rollOverTradeDistribution = async (rollover_id) => {
           (investorProfit * (investment.manager_performance_fee || 0)) / 100
         );
 
-        // Bulk update for investment
         bulkInvestmentUpdates.push({
           updateOne: {
             filter: { _id: investment._id },
@@ -330,6 +321,7 @@ const rollOverTradeDistribution = async (rollover_id) => {
                 current_interval_profit_equity: investorProfit,
                 total_trade_profit: investorProfit,
                 closed_trade_profit: investorProfit,
+                total_equity: investorProfit,   // FIXED
                 performance_fee_projected: performanceFee,
               },
               $set: { last_rollover: rollover_id },
@@ -337,35 +329,27 @@ const rollOverTradeDistribution = async (rollover_id) => {
           },
         });
 
-        // Insert investor trade record
         investorTradeRows.push({
           manager: manager._id,
           investment: investment._id,
           manager_trade: trade._id,
-
           type: trade.type,
           symbol: trade.symbol,
           manager_volume: trade.manager_volume,
           open_price: trade.open_price,
           close_price: trade.close_price,
           swap: trade.swap,
-
           open_time: trade.open_time,
           close_time: trade.close_time,
-
           manager_profit: trade.manager_profit,
           investor_profit: investorProfit,
-
           rollover_id,
         });
       }
 
-      //-------------------------------
-      // UPDATE COMPOUND PROFIT CHART
-      //-------------------------------
+      // COMPOUND PROFIT CHART
       const chartDate = dayjs(trade.close_time).startOf("day").toDate();
-
-      const lastEquity = manager.total_funds || 1; // avoid divide-by-zero
+      const lastEquity = manager.total_funds || 1;
       const dailyPercent = toTwoDecimals((tradeProfit / lastEquity) * 100);
 
       const existingChart = await compountProfitChartModel
@@ -375,7 +359,6 @@ const rollOverTradeDistribution = async (rollover_id) => {
       if (existingChart) {
         const newValue =
           (1 + existingChart.value / 100) * (1 + dailyPercent / 100) - 1;
-
         existingChart.value = toTwoDecimals(newValue * 100);
         await existingChart.save({ session });
       } else {
@@ -391,9 +374,6 @@ const rollOverTradeDistribution = async (rollover_id) => {
         );
       }
 
-      //-------------------------------
-      // UPDATE MANAGER TRADE → distributed
-      //-------------------------------
       bulkTradeUpdates.push({
         updateOne: {
           filter: { _id: trade._id },
@@ -401,9 +381,6 @@ const rollOverTradeDistribution = async (rollover_id) => {
         },
       });
 
-      //-------------------------------
-      // UPDATE MANAGER PROFIT
-      //-------------------------------
       bulkManagerUpdates.push({
         updateOne: {
           filter: { _id: manager._id },
@@ -411,15 +388,13 @@ const rollOverTradeDistribution = async (rollover_id) => {
             $inc: {
               closed_trade_profit: tradeProfit,
               total_trade_profit: tradeProfit,
+              total_funds: tradeProfit, // FIXED
             },
           },
         },
       });
     }
 
-    //-------------------------------
-    // EXECUTE BULK OPERATIONS
-    //-------------------------------
     if (bulkInvestmentUpdates.length)
       await investmentModel.bulkWrite(bulkInvestmentUpdates, { session });
 
@@ -434,11 +409,6 @@ const rollOverTradeDistribution = async (rollover_id) => {
 
     await session.commitTransaction();
     session.endSession();
-
-    console.log(
-      "Trade distribution completed. Profit distributed:",
-      totalProfitDistributed
-    );
 
     return toTwoDecimals(totalProfitDistributed);
   } catch (error) {

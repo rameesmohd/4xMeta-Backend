@@ -4,7 +4,8 @@ const { verifyUser } = require('../middlewares/userAuth')
 const auth = require('../controllers/userTele/authController');
 const user = require('../controllers/userTele/userController');
 const payment = require('../controllers/userTele/paymentController');
-const investment = require('../controllers/userTele/invController')
+const investment = require('../controllers/userTele/invController');
+const chart = require('../controllers/chartController');
 
 router.route('/user')
       .post(auth.teleUser)
@@ -39,5 +40,9 @@ router.route('/porfolio')
 
 router.route('/portfolio/history')
       .post(investment.fetchInvTransactions)
+
+router.get("/chart/daily", chart.getDailyChart);
+router.get("/chart/weekly", chart.getWeeklyChart);
+router.get("/chart/monthly", chart.getMonthlyChart);
 
 module.exports=router
