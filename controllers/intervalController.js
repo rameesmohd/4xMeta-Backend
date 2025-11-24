@@ -151,6 +151,7 @@ const intervalHandle = async (intervalId = null) => {
       feeTransactions.push({
         user: inv.user,
         investment: inv._id,
+        manager: inv.manager,
         type: "manager_fee",
         status: "success",
         amount: perfFee,
@@ -234,56 +235,99 @@ const intervalHandle = async (intervalId = null) => {
    - returns the created interval doc
 ============================================================================ */
 const handleInterval = async () => {
-  // Close last pending interval (if any)
-  const existing = await intervalModel
-    .findOne({ status: "pending" })
-    .sort({ createdAt: -1 });
+  try {
+    console.log("⏳ Starting weekly interval creation...");
 
-  if (existing) {
-    existing.status = "completed";
-    await existing.save();
+    // ---------------------------------------------------------------
+    // 1. Close last pending interval (if any)
+    // ---------------------------------------------------------------
+    const existing = await intervalModel
+      .findOne({ status: "pending" })
+      .sort({ createdAt: -1 });
+
+    if (existing) {
+      console.log("⚠️ Found a previous pending interval. Closing it...");
+      existing.status = "completed";
+      await existing.save();
+    }
+
+    // ---------------------------------------------------------------
+    // 2. Compute weekly start/end (UTC)
+    // ---------------------------------------------------------------
+    const today = new Date();
+    const dow = today.getUTCDay(); // 0=Sunday
+
+    const start = new Date(today);
+    start.setUTCDate(today.getUTCDate() - dow);
+    start.setUTCHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 6);
+    end.setUTCHours(23, 59, 59, 999);
+
+    const label = `${start.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })}–${end.toLocaleDateString("en-US", {
+      day: "numeric",
+    })} ${start.getUTCFullYear()}`;
+
+    // Compute weekly index "2025-W47"
+    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+    const weekNumber = Math.ceil(
+      ((today - yearStart) / 86400000 + yearStart.getUTCDay() + 1) / 7
+    );
+    const intervalIndex = `${today.getUTCFullYear()}-W${String(weekNumber).padStart(
+      2,
+      "0"
+    )}`;
+
+    // ---------------------------------------------------------------
+    // 3. Create new interval
+    // ---------------------------------------------------------------
+    console.log("📌 Creating new weekly interval record...");
+
+    const newInterval = await intervalModel.create({
+      period: "weekly",
+      status: "pending",
+      current_interval_start: start,
+      current_interval_end: end,
+      current_intervel: label,
+      interval_index: intervalIndex,
+      total_investments_processed: 0,
+    });
+
+    console.log("✔ Interval created:", newInterval._id);
+
+    // ---------------------------------------------------------------
+    // 4. Run weekly settlement — THIS MAY THROW ERRORS
+    // ---------------------------------------------------------------
+    try {
+      console.log("🔄 Running weekly settlement...");
+      await intervalHandle(newInterval._id);
+      console.log("✔ Weekly settlement completed successfully.");
+    } catch (settleErr) {
+      console.error("❌ Weekly settlement FAILED:", settleErr);
+
+      // Mark this new interval as failed
+      await intervalModel.updateOne(
+        { _id: newInterval._id },
+        { status: "failed" }
+      );
+
+      throw new Error(
+        `Weekly settlement failed for interval ${newInterval._id}: ${settleErr.message}`
+      );
+    }
+
+    // ---------------------------------------------------------------
+    // 5. Return interval if everything succeeded
+    // ---------------------------------------------------------------
+    return newInterval;
+  } catch (err) {
+    console.error("❌ Interval creation failed:", err);
+    throw err; // rethrow so API handler can return 500
   }
-
-  // Compute weekly dates (Sunday..Saturday UTC)
-  const today = new Date();
-  const dow = today.getUTCDay(); // Sunday = 0
-
-  const start = new Date(today);
-  start.setUTCDate(today.getUTCDate() - dow);
-  start.setUTCHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 6);
-  end.setUTCHours(23, 59, 59, 999);
-
-  // Label like "Nov 23–29 2025"
-  const label = `${start.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  })}–${end.toLocaleDateString("en-US", {
-    day: "numeric",
-  })} ${start.getUTCFullYear()}`;
-
-  // Compute week index (ISO-like simple week index)
-  const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil(((today - yearStart) / 86400000 + yearStart.getUTCDay() + 1) / 7);
-  const intervalIndex = `${today.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
-
-  // Create new interval (pending) and pass its id to settlement
-  const newInterval = await intervalModel.create({
-    period: "weekly",
-    status: "pending",
-    current_interval_start: start,
-    current_interval_end: end,
-    current_intervel: label,
-    interval_index: intervalIndex,
-    total_investments_processed: 0,
-  });
-
-  // Run settlement for this new interval (pass id so processedCount writes back)
-  await intervalHandle(newInterval._id);
-
-  return newInterval;
 };
 
 /* ============================================================================

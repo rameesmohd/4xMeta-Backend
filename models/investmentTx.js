@@ -45,9 +45,6 @@ const investmentTransactionSchema = new Schema(
       default: null,
     },
 
-    // unified status naming across app:
-    // pending → waiting for manager approval / blockchain validation
-    // success → fully completed
     // failed → reversed
     status: {
       type: String,

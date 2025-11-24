@@ -39,6 +39,10 @@ router.route('/invest')
 router.route('/porfolio')
       .get(investment.fetchInvestment)
 
+router.route('/withdraw/investment')
+      .get(investment.getWithdrawSummary)
+      .post(investment.handleInvestmentWithdrawal)
+
 router.route('/portfolio/history')
       .post(investment.fetchInvTransactions)
 
