@@ -254,8 +254,9 @@ const getDailyGrowthData = async (managerId) => {
 
 // helper: safe 2-decimal rounding (returns Number)
 const toTwoDecimals = (v) => {
-  const n = Number(v) || 0;
-  return Number(n.toFixed(2));
+  const n = Number(v);
+  if (isNaN(n)) return 0;
+  return Math.round(n * 100) / 100;
 };
 
 const rollOverTradeDistribution = async (rollover_id) => {
@@ -315,12 +316,14 @@ const rollOverTradeDistribution = async (rollover_id) => {
             filter: { _id: investment._id },
             update: {
               $inc: {
-                current_interval_profit: investorProfit,
-                current_interval_profit_equity: investorProfit,
-                total_trade_profit: investorProfit,
-                closed_trade_profit: investorProfit,
-                total_equity: investorProfit,
-                performance_fee_projected: performanceFee,
+                $inc: {
+                    current_interval_profit: toTwoDecimals(investorProfit),
+                    current_interval_profit_equity: toTwoDecimals(investorProfit),
+                    total_trade_profit: toTwoDecimals(investorProfit),
+                    closed_trade_profit: toTwoDecimals(investorProfit),
+                    total_equity: toTwoDecimals(investorProfit),
+                    performance_fee_projected: toTwoDecimals(performanceFee),
+                  },
               },
               $set: { last_rollover: rollover_id },
             },
