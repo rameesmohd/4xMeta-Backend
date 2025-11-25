@@ -8,6 +8,7 @@ const investment = require('../controllers/userTele/invController');
 const manager = require('../controllers/manager/managerController')
 const chart = require('../controllers/chartController');
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
+const upload = require('../config/multer');
 
 router.post('/user',auth.teleUser)
 
@@ -51,6 +52,10 @@ router.get("/chart/daily", chart.getDailyChart);
 router.get("/chart/weekly", chart.getWeeklyChart);
 router.get("/chart/monthly", chart.getMonthlyChart);
 router.get("/chart",chart.getUserGrowthChart)
+
+router.post('/kyc/otp',user.handleEmailVerificationOtp)
+router.post('/kyc/identity',upload.array("identityProof", 5),user.handleKycProofSubmit)
+router.post('/kyc/residential',upload.array("residentialProof", 5),user.handleKycProofSubmit)
 
 
 module.exports=router

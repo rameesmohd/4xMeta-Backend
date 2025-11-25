@@ -283,6 +283,92 @@ const updateUserDetails = async (req, res) => {
   }
 };
 
+const handleEmailVerificationOtp=async(req,res)=>{
+    try {
+        const {action,user_id} = req.body
+        console.log(req.body);
+        const userData = await UserModel.findOne({_id:user_id})
+        const OTP = randomSixDigitNumber
+        if(action=='send'){
+            try {
+                await resend.emails.send({
+                  from: process.env.WEBSITE_MAIL,
+                  to: userData.email,
+                  subject:"Verify email",
+                  html: verification(OTP,userData.first_name),
+                });
+            } catch (emailError) {
+                console.error("Error sending email:", emailError);
+                return res
+                    .status(500)
+                    .json({ errMsg: "Failed to send verification email." });
+            }
+           return res.status(200).json({OTP,success: true,msg: "Otp sent successfully" });
+        } else if(action=='verify'){
+            const updatedUser = await UserModel.findOneAndUpdate(
+                {_id : user_id},
+                { 
+                    $set : {is_email_verified : true },
+                    $inc : {kyc_step : 1}
+            },
+            {new : true}
+            ) 
+            return res.status(200).json({result : updatedUser, success: true, msg: "Email successfully verified." });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+    }
+}
+
+const handleKycProofSubmit=async(req,res)=>{
+    try {
+        console.log(req.body);
+        console.log(req.files);
+        
+        const { type,user_id } = req.body
+        if (type === "identity") {
+            // 🔹 Upload each file to Cloudinary
+            const identityProofUrls = await Promise.all(
+                req.files.map(async (file) => await uploadToCloudinary(file.path))
+            );
+
+            const updatedUser = await UserModel.findOneAndUpdate(
+                { _id: user_id },
+                {
+                    $set: {
+                        identify_proof: identityProofUrls,
+                        identify_proof_status: "submitted"
+                    },
+                    $inc: { kyc_step: 1 }
+                },
+                { new: true }
+            );
+            return res.status(200).json({ result: updatedUser });
+        } else if(type==="residential"){
+            // 🔹 Upload each file to Cloudinary
+            const residentialProofUrls = await Promise.all(
+                req.files.map(async (file) => await uploadToCloudinary(file.path))
+            );
+
+            const updatedUser =await UserModel.findOneAndUpdate(
+                    { _id: user_id},
+                    {
+                        $set: {
+                            residential_proof: residentialProofUrls,
+                            residential_proof_status: "submitted"
+                        },
+                        $inc: { kyc_step: 1 }
+                    },
+                    {new  : true}
+            )
+            return res.status(200).json({result : updatedUser});
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+    }
+}
 
 module.exports = {
     fetchUserWallet,
@@ -290,5 +376,6 @@ module.exports = {
     fetchAccountData,
 
     updateUserDetails,
-
+    handleEmailVerificationOtp,
+    handleKycProofSubmit
 }
