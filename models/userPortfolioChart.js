@@ -9,8 +9,15 @@ const userPortfolioChart = new Schema(
       index: true,
       required: true,
     },
-    date: { type: Date, required: true, index: true }, // normalized to midnight UTC
-    value: { type: Number, required: true }, // total equity (or percent growth — choose one)
+    date: { 
+      type: Date, 
+      required: true, 
+      index: true 
+    }, 
+    value: { 
+      type: Number, 
+      required: true 
+    },
   },
   { timestamps: true }
 );

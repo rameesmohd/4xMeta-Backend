@@ -3,7 +3,7 @@ const investmentTransactionModel = require('../../models/investmentTx');
 const userTransactionModel = require('../../models/userTx');
 const userModel = require('../../models/user')
 const managerModel = require('../../models/manager');
-const investmentTradesModel =require('../../models/invTrades');
+const investmentTradesModel =require('../../models/investmentTrades');
 const rolloverModel = require('../../models/rollover');
 const { default: mongoose } = require('mongoose');
 

@@ -163,25 +163,30 @@
     }
   };
 
-  // const fetchAccountData=async(req,res)=>{
-  //   try {
-  //     const { manager_id } = req.query
-  //     const trades = await managerTradeModel.find({manager : manager_id}).sort({createdAt : -1})
-  //     const accTransactions  = await InvestmentTransaction.find({manager : manager_id}).sort({createdAt : -1})
-  //     return res.status(200).json({
-  //       success : true,
-  //       result : {
-  //           trades,
-  //           accTransactions
-  //       }
-  //     })
-  //   } catch (error) {
-  //     return res.status(500).json({
-  //       success: false,
-  //       error: error.message,
-  //     });
-  //   }
-  // }
+const fetchManager =async(req,res)=>{
+    try {
+        const {id} = req.query
+        const recentTradeslimit = 3
+        const manager =  await managerModel.findOne({id : id },{password : 0})
+        const recentTrades = await managerTradeModel
+          .find({ manager: manager._id })
+          .sort({ createdAt: -1 })       // newest first
+          .limit(recentTradeslimit);
+
+        if(manager){
+            return res.status(200).json({
+              status : "success",
+              manager,
+              recentTrades
+            })
+        }else{
+            return res.status(200).json({errMsg : "Invalid id"})
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+    }
+}
 
 const fetchAccountData = async (req, res) => {
   try {
@@ -274,11 +279,11 @@ const fetchAccountData = async (req, res) => {
 };
 
 
-
   module.exports = { 
       getManagerData,
       fetchMyInvesters,
       login,
       managerLogout,
-      fetchAccountData
+      fetchAccountData,
+      fetchManager
   }

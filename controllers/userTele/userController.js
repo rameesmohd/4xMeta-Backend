@@ -1,6 +1,7 @@
-const managerModel = require('../../models/manager');
 const userTransactionModel = require('../../models/userTx')
-const managerTrades = require('../../models/managerTrades')
+const InvestmentTransaction = require('../../models/investmentTx');
+const InvestmentTrades  = require('../../models/investmentTrades');
+const InvestmentModel = require('../../models/investment')
 
 const fetchUserWallet = async (req, res) => {
   try {
@@ -117,51 +118,133 @@ const fetchUserWalletTransactions = async (req, res) => {
   }
 };
 
-const fetchManager =async(req,res)=>{
-    try {
-        const {id} = req.query
-        const recentTradeslimit = 3
-        const manager =  await managerModel.findOne({id : id },{password : 0})
-        const recentTrades = await managerTrades
-          .find({ manager: manager._id })
-          .sort({ createdAt: -1 })       // newest first
-          .limit(recentTradeslimit);
 
-        if(manager){
-            return res.status(200).json({
-              status : "success",
-              manager,
-              recentTrades
-            })
-        }else{
-            return res.status(200).json({errMsg : "Invalid id"})
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+const fetchAccountData = async (req, res) => {
+  try {
+    const {
+      manager_id,
+      filter = "month",
+      page = 1,
+      limit = 20,
+      start_date,
+      end_date
+    } = req.query;
+
+    const user_id = req.user?._id;
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        errMsg: "User ID missing"
+      });
     }
-}
 
-const fetchManagerRecentTrades =async(req,res)=>{
-    try {
-        const { id } = req.query
-        const limit = 3 
-        const manager =  await managerTrades.findOne({id : id },{password : 0})
-        if(manager){
-            return res.status(200).json({result : manager})
-        }else{
-            return res.status(200).json({errMsg : "Invalid id"})
-        }
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+    if (!manager_id) {
+      return res.status(400).json({
+        success: false,
+        errMsg: "manager ID missing"
+      });
     }
-}
 
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
+    let createdAtFilter = null;
+
+    /* ----------- PRESET FILTERS ----------- */
+    if (filter === "today") {
+      createdAtFilter = {
+        $gte: new Date(now.setHours(0, 0, 0, 0))
+      };
+    } else if (filter === "week") {
+      createdAtFilter = {
+        $gte: new Date(Date.now() - 7 * 86400000)
+      };
+    } else if (filter === "month") {
+      createdAtFilter = {
+        $gte: new Date(Date.now() - 30 * 86400000)
+      };
+    }
+
+    /* ----------- CUSTOM DATE RANGE ----------- */
+    if (filter === "custom") {
+      if (!start_date || !end_date) {
+        return res.status(400).json({
+          success: false,
+          message: "Start and End dates required for custom filter"
+        });
+      }
+
+      createdAtFilter = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59.999Z")
+      };
+    }
+
+   /* ----------- FIND USER INVESTMENT FOR THIS MANAGER ----------- */
+    const investment = await InvestmentModel.findOne({
+      manager: manager_id,
+      user: user_id
+    }).lean();
+
+    if (!investment) {
+      return res.json({
+        success: true,
+        result: { trades: [], accTransactions: [] },
+      });
+    }
+
+    /* ----------- BUILD FINAL QUERY ----------- */
+    const baseQuery = { };
+    if (filter !== "all" && createdAtFilter) {
+      baseQuery.createdAt = createdAtFilter;
+    }
+
+    /* ----------- FETCH TRADES ----------- */
+    const trades = await InvestmentTrades.find({
+      ...baseQuery,
+      investment: investment._id
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    /* ----------- FETCH ACCOUNT TRANSACTIONS ----------- */
+    const accTransactions = await InvestmentTransaction.find({
+      ...baseQuery,
+      investment: investment._id,
+      user: user_id 
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    /* ----------- PAGINATION FIX ----------- */
+    const maxListCount = Math.max(trades.length, accTransactions.length);
+
+    return res.json({
+      success: true,
+      result: {
+        trades,
+        accTransactions
+      },
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        hasMore: maxListCount === Number(limit)
+      }
+    });
+
+  } catch (err) {
+    console.log("Fetch Account Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 module.exports = {
     fetchUserWallet,
     fetchUserWalletTransactions,
-
-    fetchManager
+    fetchAccountData
 }

@@ -2,9 +2,7 @@ const investmentModel = require('../../models/investment');
 const investmentTransactionModel = require('../../models/investmentTx');
 const userTransactionModel = require('../../models/userTx');
 const userModel = require('../../models/user')
-const managerModel = require('../../models/manager');
-const investmentTradesModel =require('../../models/invTrades');
-const rolloverModel = require('../../models/rollover');
+const investmentTradesModel =require('../../models/investmentTrades');
 const { default: mongoose } = require('mongoose');
 
 const fetchInvestmentTransactions=async(req,res)=>{

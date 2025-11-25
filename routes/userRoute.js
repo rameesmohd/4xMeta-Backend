@@ -8,8 +8,7 @@ const investment = require('../controllers/userTele/invController');
 const manager = require('../controllers/manager/managerController')
 const chart = require('../controllers/chartController');
 
-router.route('/user')
-      .post(auth.teleUser)
+router.post('/user',auth.teleUser)
 
 router.use(verifyUser)
 
@@ -21,35 +20,31 @@ router.route('/deposit/usdt-bep20')
       .get(payment.bep20CreateDeposit) 
       .post(payment.bep20CheckAndTransferPayment)
 
-router.route('/withdraw/crypto')
-      .post(payment.withdrawFromMainWallet)
+router.post('/withdraw/crypto',payment.withdrawFromMainWallet)
 
-router.route('/wallet')
-      .get(user.fetchUserWallet)
+router.get('/wallet',user.fetchUserWallet)
 
-router.route('/transactions')
-      .get(user.fetchUserWalletTransactions)
+router.get('/transactions',user.fetchUserWalletTransactions)
 
-router.route('/manager-portfolio')
-      .get(user.fetchManager)
+router.get("/account-history/user",user.fetchAccountData)
+      
+router.post('/invest',investment.makeInvestment)
 
-router.route('/invest')
-      .post(investment.makeInvestment)
-
-router.route('/porfolio')
-      .get(investment.fetchInvestment)
+router.get('/porfolio',investment.fetchInvestment)
 
 router.route('/withdraw/investment')
       .get(investment.getWithdrawSummary)
       .post(investment.handleInvestmentWithdrawal)
 
-router.route('/portfolio/history')
-      .post(investment.fetchInvTransactions)
+router.post('/portfolio/history',investment.fetchInvTransactions)
+
+router.get('/manager-portfolio',manager.fetchManager)
+router.get("/account-history/manager",manager.fetchAccountData)
 
 router.get("/chart/daily", chart.getDailyChart);
 router.get("/chart/weekly", chart.getWeeklyChart);
 router.get("/chart/monthly", chart.getMonthlyChart);
+router.get("/chart",chart.getUserGrowthChart)
 
-router.get("/account-history/manager",manager.fetchAccountData)
 
 module.exports=router

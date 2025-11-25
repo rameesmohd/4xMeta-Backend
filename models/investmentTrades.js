@@ -7,6 +7,12 @@ const tradeSchema = new Schema(
         type: Schema.Types.ObjectId, 
         ref: 'manager', 
         required: true },
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: "users",
+        required: true,
+        index: true
+      },
       investment : {
         type: Schema.Types.ObjectId, 
         ref: 'investments', 

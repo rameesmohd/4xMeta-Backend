@@ -2,6 +2,10 @@ const managerGrowthChart = require("../models/managerGrowthChart");
 const managerModel = require("../models/manager");
 const dayjs = require("dayjs");
 const isoWeek = require("dayjs/plugin/isoWeek");
+const { default: mongoose } = require("mongoose");
+const userPortfolioChart = require("../models/userPortfolioChart");
+const { fetchAndUseLatestRollover } = require("./rolloverController");
+const rolloverModel = require("../models/rollover");
 dayjs.extend(isoWeek);
 
 const getDailyChart = async (req, res) => {
@@ -129,9 +133,64 @@ const fetchChartData=async(req,res)=>{
     }
 }
 
+// Get User Portfolio Growth Chart
+const getUserGrowthChart = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { filter = "30D" } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID missing" });
+    }
+
+    let dateFilter = {};
+    const now = Date.now();
+
+    // ===== PRESET FILTERS =====
+    if (filter === "7D") {
+      dateFilter.date = { $gte: new Date(now - 7 * 86400000) };
+    } else if (filter === "30D") {
+      dateFilter.date = { $gte: new Date(now - 30 * 86400000) };
+    } else if (filter === "90D") {
+      dateFilter.date = { $gte: new Date(now - 90 * 86400000) };
+    } else if (filter === "1Y") {
+      dateFilter.date = { $gte: new Date(now - 365 * 86400000) };
+    } else if (filter === "ALL") {
+      // no filter → return everything
+    }
+
+    const chart = await userPortfolioChart
+      .find({ user: userId, ...dateFilter })
+      .sort({ date: 1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: chart.map((c) => ({
+        date: c.date,
+        value: Number(c.value || 0),
+      })),
+    });
+
+  } catch (err) {
+    console.log("Growth chart error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+
 module.exports={
+  //=======MANAGER==============
   fetchChartData,
   getDailyChart,
   getWeeklyChart,
-  getMonthlyChart
+  getMonthlyChart,
+  //==============================
+  //             USER
+  //==============================
+  getUserGrowthChart
 }
