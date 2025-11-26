@@ -1,8 +1,16 @@
-const userTransactionModel = require('../../models/userTx')
+const UserTransactionModel = require('../../models/userTx')
 const InvestmentTransaction = require('../../models/investmentTx');
 const InvestmentTrades  = require('../../models/investmentTrades');
 const InvestmentModel = require('../../models/investment')
+const OtpModel = require('../../models/otp')
 const UserModel = require('../../models/user')
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const {
+    forgotMail,
+    verification
+} = require("../../assets/html/verification");
+const { uploadToCloudinary } = require('../../config/cloudinary');
 
 const fetchUserWallet = async (req, res) => {
   try {
@@ -17,7 +25,7 @@ const fetchUserWallet = async (req, res) => {
     /* ------------------------------
        CALCULATE TOTAL DEPOSITED 
     -------------------------------*/
-    const depositedAgg = await userTransactionModel.aggregate([
+    const depositedAgg = await UserTransactionModel.aggregate([
       { $match: { user: user._id, type: "deposit", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
@@ -27,7 +35,7 @@ const fetchUserWallet = async (req, res) => {
     /* ------------------------------
        CALCULATE TOTAL WITHDRAWN 
     -------------------------------*/
-    const withdrawnAgg = await userTransactionModel.aggregate([
+    const withdrawnAgg = await UserTransactionModel.aggregate([
       { $match: { user: user._id, type: "withdrawal", status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
@@ -37,7 +45,7 @@ const fetchUserWallet = async (req, res) => {
     /* ------------------------------
          FETCH TRANSACTIONS
     -------------------------------*/
-    const transactions = await userTransactionModel
+    const transactions = await UserTransactionModel
       .find({ user: user._id })
       .sort({ createdAt: -1 }) // newest first (MT5 style)
       .skip(skip)
@@ -47,7 +55,7 @@ const fetchUserWallet = async (req, res) => {
     /* ------------------------------
          TOTAL COUNT FOR PAGINATION
     -------------------------------*/
-    const totalCount = await userTransactionModel.countDocuments({
+    const totalCount = await UserTransactionModel.countDocuments({
       user: user._id,
     });
 
@@ -92,10 +100,10 @@ const fetchUserWalletTransactions = async (req, res) => {
     };
 
     // Get total count before limit/skip
-    const totalCount = await userTransactionModel.countDocuments(query);
+    const totalCount = await UserTransactionModel.countDocuments(query);
 
     // Fetch paginated results
-    const transactions = await userTransactionModel
+    const transactions = await UserTransactionModel
       .find(query)
       .limit(limitNum)
       .skip(skipNum)
@@ -283,92 +291,136 @@ const updateUserDetails = async (req, res) => {
   }
 };
 
-const handleEmailVerificationOtp=async(req,res)=>{
-    try {
-        const {action,user_id} = req.body
-        console.log(req.body);
-        const userData = await UserModel.findOne({_id:user_id})
-        const OTP = randomSixDigitNumber
-        if(action=='send'){
-            try {
-                await resend.emails.send({
-                  from: process.env.WEBSITE_MAIL,
-                  to: userData.email,
-                  subject:"Verify email",
-                  html: verification(OTP,userData.first_name),
-                });
-            } catch (emailError) {
-                console.error("Error sending email:", emailError);
-                return res
-                    .status(500)
-                    .json({ errMsg: "Failed to send verification email." });
-            }
-           return res.status(200).json({OTP,success: true,msg: "Otp sent successfully" });
-        } else if(action=='verify'){
-            const updatedUser = await UserModel.findOneAndUpdate(
-                {_id : user_id},
-                { 
-                    $set : {is_email_verified : true },
-                    $inc : {kyc_step : 1}
-            },
-            {new : true}
-            ) 
-            return res.status(200).json({result : updatedUser, success: true, msg: "Email successfully verified." });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+const handleEmailVerificationOtp = async (req, res) => {
+  try {
+    const { action, otp } = req.body;
+    const user = req.user;
+
+    if (action === "send") {
+      const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      await OtpModel.deleteMany({ user: user._id }); 
+
+      await OtpModel.create({
+        user: user._id,
+        otp: randomOtp,
+      });
+
+      // send email using resend
+      await resend.emails.send({
+        from: process.env.WEBSITE_MAIL,
+        to: user.email,
+        subject: "Verify Your Email",
+        html: verification(randomOtp, user.first_name),
+      });
+
+      return res.status(200).json({
+        success: true,
+        msg: "OTP sent successfully",
+      });
     }
-}
 
-const handleKycProofSubmit=async(req,res)=>{
-    try {
-        console.log(req.body);
-        console.log(req.files);
-        
-        const { type,user_id } = req.body
-        if (type === "identity") {
-            // 🔹 Upload each file to Cloudinary
-            const identityProofUrls = await Promise.all(
-                req.files.map(async (file) => await uploadToCloudinary(file.path))
-            );
+    if (action === "verify") {
+      const otpRecord = await OtpModel.findOne({ user: user._id });
 
-            const updatedUser = await UserModel.findOneAndUpdate(
-                { _id: user_id },
-                {
-                    $set: {
-                        identify_proof: identityProofUrls,
-                        identify_proof_status: "submitted"
-                    },
-                    $inc: { kyc_step: 1 }
-                },
-                { new: true }
-            );
-            return res.status(200).json({ result: updatedUser });
-        } else if(type==="residential"){
-            // 🔹 Upload each file to Cloudinary
-            const residentialProofUrls = await Promise.all(
-                req.files.map(async (file) => await uploadToCloudinary(file.path))
-            );
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          errMsg: "OTP expired or not found",
+        });
+      }
 
-            const updatedUser =await UserModel.findOneAndUpdate(
-                    { _id: user_id},
-                    {
-                        $set: {
-                            residential_proof: residentialProofUrls,
-                            residential_proof_status: "submitted"
-                        },
-                        $inc: { kyc_step: 1 }
-                    },
-                    {new  : true}
-            )
-            return res.status(200).json({result : updatedUser});
+      // incorrect attempt
+      if (otpRecord.otp !== otp) {
+        otpRecord.attempts += 1;
+
+        if (otpRecord.attempts >= 3) {
+          await OtpModel.deleteMany({ user: user._id }); 
+          return res.status(403).json({
+            success: false,
+            errMsg: "Too many attempts. Please request a new OTP.",
+          });
         }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ errMsg: 'Server error!', error: error.message });
+
+        await otpRecord.save();
+
+        return res.status(400).json({
+          success: false,
+          errMsg: `Incorrect OTP. Attempts left: ${3 - otpRecord.attempts}`,
+        });
+      }
+
+      // correct otp -> delete & update
+      await OtpModel.deleteMany({ user: user._id });
+
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        user._id,
+        {
+          $set: { "kyc.is_email_verified": true },
+          $inc: { "kyc.step": 1 },
+        },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        msg: "Email verified successfully",
+        result: updatedUser,
+      });
     }
-}
+  } catch (error) {
+    console.log("OTP Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const handleKycProofSubmit = async (req, res) => {
+  try {
+    const { type } = req.body;
+    const user = req.user;
+
+    if (!type || !req.files) {
+      return res.status(400).json({ success: false, message: "Invalid request" });
+    }
+
+    const fileUrls = await Promise.all(
+      req.files.map((file) => uploadToCloudinary(file.path))
+    );
+
+    // Fetch the user
+    const currentUser = await UserModel.findById(user._id);
+    if (!currentUser) return res.status(404).json({ success: false, message: "User not found" });
+
+    let newStep = currentUser.kyc.step;
+    if (newStep < 4) newStep++; // Prevent overflow
+
+    let updateObj = { "kyc.step": newStep };
+
+    if (type === "identity") {
+      updateObj["kyc.identify_proof"] = fileUrls;
+      updateObj["kyc.identify_proof_status"] = "submitted";
+    } else if (type === "residential") {
+      updateObj["kyc.residential_proof"] = fileUrls;
+      updateObj["kyc.residential_proof_status"] = "submitted";
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid proof type" });
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      user._id,
+      { $set: updateObj },
+      { new: true }
+    );
+
+    res.status(200).json({ success: true, result: updatedUser });
+
+  } catch (error) {
+    console.error("KYC submit error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
 
 module.exports = {
     fetchUserWallet,

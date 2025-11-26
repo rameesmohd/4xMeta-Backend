@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const fs = require("fs")
 require('dotenv').config();
 
 cloudinary.config({
