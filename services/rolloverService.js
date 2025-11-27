@@ -66,7 +66,7 @@ const processRollover = async (rolloverId) => {
 
     await rollover.save();
 
-    console.log(`✅ Rollover ${rolloverId} completed at ${rollover.processed_at}`);
+    // console.log(`✅ Rollover ${rolloverId} completed at ${rollover.processed_at}`);
   } catch (error) {
     console.log("❌ Error during rollover:", error);
 
@@ -102,11 +102,11 @@ const createRollover = async (period) => {
 
     await rollover.save();
 
-    log("🆕 Created rollover:", rollover._id);
+    // console.log("🆕 Created rollover:", rollover._id);
 
     await processRollover(rollover._id);
   } catch (err) {
-    log("❌ Error creating rollover:", err);
+    console.log("❌ Error creating rollover:", err);
   }
 };
 
@@ -134,14 +134,14 @@ const fetchLatestCompletedRollover = async () => {
 //------------------------------------------------------------
 
 // Every 4 hours, Monday–Friday
-cron.schedule("0 */4 * * 1-5", () => {
-  log("⏱ Running scheduled 4hr rollover");
-  createRollover("4hr");
-});
+// cron.schedule("0 */4 * * 1-5", () => {
+//   console.log("⏱ Running scheduled 4hr rollover");
+//   createRollover("4hr");
+// });
 
 // 15-minute testing (enable when needed)
 cron.schedule("*/15 * * * *", () => {
-  log("🧪 Running test 15min rollover");
+  console.log("🧪 Running test 15min rollover");
   createRollover("15min");
 });
 
