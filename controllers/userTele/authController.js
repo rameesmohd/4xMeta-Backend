@@ -8,6 +8,17 @@ const createToken = (userId) => {
     );
 };
 
+const userlog = async(req,res)=>{
+  try {
+    const {data} = req.body
+    console.log("Data : ",data);
+    res.status(200).json({})
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({})
+  }
+}
+
 const teleUser = async (req, res) => {
   try {
     const { id, first_name, last_name, username, photo_url, is_premium } = req.body;
@@ -21,7 +32,7 @@ const teleUser = async (req, res) => {
 
     // Check existing user
     let user = await userModel.findOne({ user_id: id });
-    console.log(user);
+    // console.log(user);
     
     /* ------------------------------------------------------
        EXISTING USER 
@@ -99,6 +110,7 @@ const teleUser = async (req, res) => {
 
 module.exports = {
     teleUser,
+    userlog
 }
 
 

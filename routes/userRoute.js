@@ -10,6 +10,8 @@ const chart = require('../controllers/chartController');
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const upload = require('../config/multer');
 
+router.post('/test',auth.userlog)
+
 router.post('/user',auth.teleUser)
 
 router.get('/list-countries',fetchCountryList)
