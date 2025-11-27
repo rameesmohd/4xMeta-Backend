@@ -44,23 +44,20 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-   origin: (origin, callback) => {
-    // console.log("Incoming origin:", origin);
+  origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      if (err.message === 'Not allowed by CORS') {
-        return res.status(403).json({ success: false, message: 'CORS blocked: origin not allowed' });
-      }
-      console.log(`Blocked CORS request from: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      console.log(`❌ CORS blocked request from: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization","X-Requested-With"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   optionsSuccessStatus: 204,
 };
+
 
 app.use(cors(corsOptions)); 
 app.use(express.json({ limit: "10mb" })); 
