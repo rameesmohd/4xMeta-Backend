@@ -34,10 +34,11 @@ app.use(helmet({
 
 app.set('trust proxy', 1);
 
+const Domain = process.env.DOMAIN
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://your-production-domain.com',
-  'http://localhost:3001'
+  'http://localhost:3001',
+   Domain
 ];
 
 const corsOptions = {
@@ -68,8 +69,8 @@ require('./services/intervalservice.js')
 
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 200 
+  windowMs: 10 * 60 * 1000, 
+  max: 100 
 });
 
 app.use('/api', limiter);
