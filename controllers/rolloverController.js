@@ -10,19 +10,19 @@ const mongoose = require("mongoose");
 /* -----------------------------------------------------------
    1. Fetch the latest pending rollover (current cycle)
 ----------------------------------------------------------- */
-// const fetchAndUseLatestRollover = async () => {
-//   const rollover = await rolloverModel
-//     .findOne({ status: "pending" })
-//     .sort({ start_time: -1 });
+const fetchAndUseLatestRollover = async () => {
+  const rollover = await rolloverModel
+    .findOne({ status: "completed" })
+    .sort({ start_time: -1 });
 
-//   if (!rollover) {
-//     console.log("⚠ No pending rollover found.");
-//     return null;
-//   }
+  if (!rollover) {
+    console.log("⚠ No pending rollover found.");
+    return null;
+  }
 
-//   console.log("🔍 Current Rollover ID:", rollover._id);
-//   return rollover;
-// };
+  console.log("🔍 Current Rollover ID:", rollover._id);
+  return rollover;
+};
 
 /* -----------------------------------------------------------
    2. Approve deposits → distribute trades → approve withdrawals
@@ -90,4 +90,5 @@ const fetchAndApprovePendingInvestmentTransactions = async (rollover_id) => {
 
 module.exports = {
   fetchAndApprovePendingInvestmentTransactions,
+  fetchAndUseLatestRollover
 };
