@@ -10,6 +10,7 @@ const cookieParser = require("cookie-parser");
 const userRoute = require('./routes/userRoute.js')
 const masterRoute = require('./routes/masterRoute.js')
 const managerRoute = require('./routes/managerRoute.js')
+const botRoute = require('./routes/botRoute.js')
 
 dotenv.config();
 connectDB()
@@ -74,7 +75,7 @@ app.use('/api', limiter);
 
 app.use('/api/master',masterRoute);
 app.use('/api/manager',managerRoute);
-
+app.use('/api/bot',botRoute);
 app.use('/api',userRoute);
 
 app.use((err, req, res, next) => {
