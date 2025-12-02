@@ -11,6 +11,7 @@ const {
     verification
 } = require("../../assets/html/verification");
 const { uploadToCloudinary } = require('../../config/cloudinary');
+const { sendKycRequestedAlert } = require('../bot/botAlerts');
 
 const fetchUserWallet = async (req, res) => {
   try {
@@ -411,6 +412,19 @@ const handleKycProofSubmit = async (req, res) => {
       { $set: updateObj },
       { new: true }
     );
+
+    if(updatedUser){
+      // after saving KYC request
+      await sendKycRequestedAlert({
+        user: {
+          first_name: updatedUser.telegram.first_name,
+          last_name: updatedUser.telegram.last_name,
+          username: updatedUser.telegram.username,
+          telegramId: updatedUser.telegram.id,
+        },
+        kycLevel: updatedUser.kyc.step,
+      });
+    }
 
     res.status(200).json({ success: true, result: updatedUser });
 

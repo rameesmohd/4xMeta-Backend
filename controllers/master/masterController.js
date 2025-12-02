@@ -320,14 +320,12 @@ const getPendingKYCRequests = async (req, res) => {
       }
     )
     .sort({ createdAt: -1 });
-
-    res.status(200).json({ success: true, result: pendingUsers });
+    return res.status(200).json({ success: true, result: pendingUsers });
   } catch (error) {
     console.error("Error fetching KYC requests:", error);
-    res.status(500).json({ success: false, message: "Error fetching KYC requests" });
+    return res.status(500).json({ success: false, message: "Error fetching KYC requests" });
   }
 };
-
 
 const approveKycDocs = async (req, res) => {
   try {
@@ -414,7 +412,6 @@ const approveKyc = async (req, res) => {
     });
   }
 };
-
 
 const handleWithdraw = async (req, res) => {
     try {
