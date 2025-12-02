@@ -35,16 +35,13 @@ const rebateTransactionModel = mongoose.models.rebate_transactions || mongoose.m
     transaction_id: { 
       type: String, 
       default: () => Math.random().toString(36).substring(2, 10).toUpperCase() 
-    },
-    createdAt: { 
-      type: Date, 
-      default: Date.now, 
-      index: true 
-    },
+    }
   },
   {
     timestamps: true,
   }
 ));
+
+rebateTransactionModel.index({ createdAt: -1 });
 
 module.exports = rebateTransactionModel;
