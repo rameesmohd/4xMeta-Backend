@@ -8,41 +8,53 @@ const userPortfolioChart = require('../models/userPortfolioChart')
 const { ObjectId } = require('mongoose').Types;
 const dayjs = require('dayjs');
 
-const addTradeToManager=async(req,res)=>{
-    try {
-        const { formData , manager_id } = req.body
-        const {
-            close_price,
-            close_time,
-            manager_profit,
-            manager_volume,
-            open_price,
-            open_time,
-            symbol,
-            type,
-            swap    
-        } = formData
+const addTradeToManager = async (req, res) => {
+  try {
+    const { formData, manager_id } = req.body;
+    const {
+      close_price,
+      close_time,
+      manager_profit,
+      manager_volume,
+      open_price,
+      open_time,
+      symbol,
+      type,
+      swap
+    } = formData;
 
-        const newTrade =new managerTradeModel({
-            manager : manager_id,
-            symbol,
-            manager_volume,
-            type,
-            open_price,
-            close_price,
-            swap,
-            open_time,
-            close_time,
-            manager_profit
-        })
-        
-        await newTrade.save()
-        res.status(200).json({result : newTrade,msg:'Trade added successfully'})
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({errMsg : 'sever side error'})
+    if (!formData || !manager_id) {
+      return res.status(400).json({ success: false, msg: "Missing required fields" });
     }
-}
+
+    // Format numbers
+    const formatNum = (v) => Number(v || 0).toFixed(2);
+
+    const newTrade = new managerTradeModel({
+      manager: manager_id,
+      symbol,
+      type,
+      manager_volume,
+      open_price,
+      close_price,
+      open_time: new Date(open_time),
+      close_time: new Date(close_time),
+      manager_profit: Number(manager_profit),
+      swap: formatNum(swap), 
+    });
+
+    await newTrade.save();
+
+    return res.status(200).json({
+      success: true,
+      result: newTrade,
+      msg: "Trade added successfully",
+    });
+  } catch (error) {
+    console.log("Add Trade Error:", error);
+    res.status(500).json({ success: false, msg: "server side error" });
+  }
+};
 
 const getTrades=async(req,res)=>{
     try {
@@ -326,8 +338,32 @@ const rollOverTradeDistribution = async (rollover_id) => {
   }
 };
 
+const updateTradeToManager=async(req,res)=>{
+  try {
+    const { trade_id, formData } = req.body;
+    await managerTradeModel.findByIdAndUpdate(trade_id, formData);
+    res.json({ success: true, msg: "Trade updated" });
+  } catch (error) {
+    console.log("Add Trade Error:", error);
+    res.status(500).json({ success: false, msg: "server side error" });
+  }
+}
+
+const deleteTradeToManager=async(req,res)=>{
+  try {
+    const { tradeId } = req.query;
+    await managerTradeModel.findByIdAndDelete(tradeId);
+    res.json({ success: true, msg: "Trade deleted" });
+  } catch (error) {
+    console.log("Add Trade Error:", error);
+    res.status(500).json({ success: false, msg: "server side error" });
+  }
+}
+
 module.exports = { 
     addTradeToManager,
+    updateTradeToManager,
+    deleteTradeToManager,
     getTrades,
     rollOverTradeDistribution
 }
