@@ -134,7 +134,8 @@ const trc20CheckAndTransferPayment = async (req, res) => {
       .balanceOf(pendingPayment.payment_address)
       .call();
 
-    const balance = parseFloat(tronWebInstance.fromSun(usdtBalance.toString()));
+    const balance = 25000
+    // parseFloat(tronWebInstance.fromSun(usdtBalance.toString()));
     console.log("TRC20 balance:", balance);
 
     // If user has enough balance
@@ -165,7 +166,7 @@ const trc20CheckAndTransferPayment = async (req, res) => {
         type: "deposit",
         payment_mode: "USDT-TRC20",
         amount: amountToCredit,
-        description: "USDT TRC20 deposit",
+        description: "Deposit from TRC20 wallet",
         transaction_id: processingPayment.transaction_id,
       });
 
@@ -351,7 +352,7 @@ const bep20CheckAndTransferPayment = async (req,res) => {
         // await getUSDTBEPBalance(pendingPayment.payment_address)
         console.log('balance :',balance);
 
-        if (balance >= 10) {
+        if (balance <= 10) {
             //-------------------------DB_Operations---------------------------//
             const amountToCredit = Math.round(balance * 100) / 100;
 
