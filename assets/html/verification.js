@@ -1,35 +1,70 @@
 const { emailTemplate } = require("./emailTemplates");
 
-const verification = (otp,userName) =>
-  emailTemplate(`<div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 8px;">
-    <h4 style="color: #333333; text-align: center;">Dear ${userName},</h4>
-    <p style="color: #555555; text-align: center;">Your email verification OTP is :</p>
-    <div style="text-align: center; margin: 20px 0;">
-      <div style="display: inline-block; padding: 10px 20px; color: white; background-color: #000; border-radius: 5px; text-decoration: none;">${otp}</div>
-    </div>
-    <p style="color: #555555; text-align: center;">If already verified for this account, you can safely ignore this email.</p>
-  </div>`);
+const verification = (otp, userName) =>
+  emailTemplate(`
+  <div style="max-width:600px;margin:auto;background:#ffffff;padding:24px;border-radius:10px;">
+    <h2 style="text-align:center;font-family:Arial,sans-serif;color:#000;font-weight:700;margin:0 0 12px;">
+      Email Verification
+    </h2>
+    <p style="text-align:center;color:#555;font-size:14px;font-family:Arial;margin:0 0 16px;">
+      Dear ${userName}, please use the verification code below:
+    </p>
 
-const withdrawalVerification = (otp,userName) =>
-  emailTemplate(`<div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 8px;">
-    <h4 style="color: #333333; text-align: center; text-transform: capitalize;">Dear ${userName},</h4>
-    <p style="color: #555555; text-align: center;">To proceed with your withdrawal request, please use the OTP below:</p>
-    <div style="text-align: center; margin: 20px 0;">
-      <div style="display: inline-block; padding: 10px 20px; color: white; background-color: #000; border-radius: 5px; text-decoration: none;">${otp}</div>
+    <div style="text-align:center;margin:24px 0;">
+      <div style="display:inline-block;padding:14px 32px;background:#000;color:#fff;border-radius:8px;font-size:24px;font-weight:700;">
+        ${otp}
+      </div>
     </div>
-    <p style="color: #555555; text-align: center;">If you did not request this withdrawal, please ignore this email or contact support immediately.</p>
-  </div>`);
+
+    <p style="text-align:center;color:#555;font-size:13px;margin:0;">
+      If you did not request this action, you may safely ignore this email.
+    </p>
+  </div>
+`);
+
+
+const withdrawalVerification = (otp, userName) =>
+  emailTemplate(`
+  <div style="max-width:600px;margin:auto;background:#ffffff;padding:24px;border-radius:10px;">
+    <h2 style="text-align:center;font-family:Arial;color:#000;margin:0 0 12px;">Withdrawal Verification</h2>
+    <p style="text-align:center;color:#555;font-size:14px;margin:0 0 16px;">
+      Dear ${userName}, use the following OTP to confirm your withdrawal:
+    </p>
+
+    <div style="text-align:center;margin:24px 0;">
+      <div style="display:inline-block;padding:14px 32px;background:#000;color:#fff;border-radius:8px;font-size:24px;font-weight:700;">
+        ${otp}
+      </div>
+    </div>
+
+    <p style="text-align:center;color:#555;font-size:13px;margin:0;">
+      If this wasn’t you, contact support immediately.
+    </p>
+  </div>
+`);
+
   
 
-const forgotMail = (otp,userName) =>
-  emailTemplate(`<div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 8px;">
-    <h4 style="color: #333333; text-align: center;">Dear ${userName},</h4>
-    <p style="color: #555555; text-align: center;">Your reset password OTP is :</p>
-    <div style="text-align: center; margin: 20px 0;">
-      <div style="display: inline-block; padding: 10px 20px; color: white; background-color: #000; border-radius: 5px; text-decoration: none;">${otp}</div>
+const forgotMail = (otp, userName) =>
+  emailTemplate(`
+  <div style="max-width:600px;margin:auto;background:#ffffff;padding:24px;border-radius:10px;">
+    <h2 style="text-align:center;font-family:Arial;color:#000;margin:0 0 12px;">Reset Password</h2>
+    <p style="text-align:center;color:#555;font-size:14px;margin:0 0 16px;">
+      Dear ${userName}, here is your password reset verification code:
+    </p>
+
+    <div style="text-align:center;margin:24px 0;">
+      <div style="display:inline-block;padding:14px 32px;background:#000;color:#fff;border-radius:8px;font-size:24px;font-weight:700;">
+        ${otp}
+      </div>
     </div>
-    <p style="color: #555555; text-align: center;">If you did not request a password reset, please disregard this email.</p>
-  </div>`);
+
+    <p style="text-align:center;color:#555;font-size:13px;margin:0;">
+      If you didn’t request this, ignore the message.
+    </p>
+  </div>
+`);
+
 
 const sendEmailToUser = ({ title, username, desOne, desTwo,desThree }) =>
     emailTemplate(`

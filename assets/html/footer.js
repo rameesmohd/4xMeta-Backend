@@ -1,247 +1,42 @@
 const footer = () => `
-   
-                      <table
-                        cellspacing="0"
-                        cellpadding="0"
-                        align="center"
-                        style="
-                          border-collapse: collapse;
-                          border-spacing: 0px;
-                          table-layout: fixed !important;
-                          width: 100%;
-                        "
-                      >
-                        <tbody>
-                          <tr>
-                            <td align="center" style="padding: 0; margin: 0">
-                              <table
-                                cellspacing="0"
-                                cellpadding="0"
-                                bgcolor="#ffffff"
-                                align="center"
-                                style="
-                                  border-collapse: collapse;
-                                  border-spacing: 0px;
-                                  background-color: #ffffff;
-                                  width: 600px;
-                                "
-                              >
-                                <tbody>
-                                  <tr>
-                                    <td
-                                      align="center"
-                                      style="
-                                        margin: 0;
-                                        padding-left: 10px;
-                                        padding-right: 10px;
-                                        padding-top: 20px;
-                                        padding-bottom: 10px;
-                                        font-size: 0;
-                                      "
-                                    >
-                                      <table
-                                        border="0"
-                                        width="100%"
-                                        height="100%"
-                                        cellpadding="0"
-                                        cellspacing="0"
-                                        role="presentation"
-                                        style="
-                                          border-collapse: collapse;
-                                          border-spacing: 0px;
-                                        "
-                                      >
-                                        <tbody>
-                                          <tr>
-                                            <td
-                                              style="
-                                                padding: 0;
-                                                margin: 0;
-                                                border-bottom: 1px solid #cccccc;
-                                                background: unset;
-                                                height: 1px;
-                                                width: 100%;
-                                                margin: 0px;
-                                              "
-                                            ></td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td
-                                      align="left"
-                                      style="
-                                        margin: 0;
-                                        padding-top: 5px;
-                                        padding-left: 20px;
-                                        padding-right: 20px;
-                                        padding-bottom: 5px;
-                                      "
-                                    >
-                                      <table
-                                        cellpadding="0"
-                                        cellspacing="0"
-                                        width="100%"
-                                        style="
-                                          border-collapse: collapse;
-                                          border-spacing: 0px;
-                                        "
-                                      >
-                                        <tbody>
-                                          <tr>
-                                            <td
-                                              align="center"
-                                              valign="top"
-                                              style="
-                                                padding: 0;
-                                                margin: 0;
-                                                width: 560px;
-                                              "
-                                            >
-                                              <table
-                                                cellpadding="0"
-                                                cellspacing="0"
-                                                width="100%"
-                                                role="presentation"
-                                                style="
-                                                  border-collapse: collapse;
-                                                  border-spacing: 0px;
-                                                "
-                                              >
-                                                <tbody>
-                                              
-                                                  <tr>
-                                                    <td
-                                                      align="left"
-                                                      style="
-                                                        padding: 0;
-                                                        margin: 0;
-                                                        padding-top: 5px;
-                                                      "
-                                                    >
-                                                      <p
-                                                        style="
-                                                          margin: 0;
-                                                          font-family: arial,
-                                                            'helvetica neue',
-                                                            helvetica,
-                                                            sans-serif;
-                                                          line-height: 24px;
-                                                          color: #333333;
-                                                          font-size: 16px;
-                                                        "
-                                                      >
-                                                        Please note: This is an auto-generated email. Do not reply to this message. For any inquiries, please 
-                                                        contact&nbsp;<u
-                                                          ><a
-                                                            href="mailto:support@pipvora.com"
-                                                            style="
-                                                              text-decoration: underline;
-                                                              color: #333333;
-                                                              font-size: 16px;
-                                                            "
-                                                            target="_blank"
-                                                            >support@pipvora.com</a
-                                                          ></u
-                                                        >&nbsp;
-                                                      </p>
-                                                      <p
-                                                        style="
-                                                          margin: 0;
-                                                          font-family: arial,
-                                                            'helvetica neue',
-                                                            helvetica,
-                                                            sans-serif;
-                                                          line-height: 24px;
-                                                          color: #333333;
-                                                          font-size: 16px;
-                                                        "
-                                                      >
-                                                        <br />
-                                                      </p>
-                                                      <p
-                                                        style="
-                                                          margin: 0;
-                                                          font-family: arial,
-                                                            'helvetica neue',
-                                                            helvetica,
-                                                            sans-serif;
-                                                          line-height: 24px;
-                                                          color: #333333;
-                                                          font-size: 16px;
-                                                        "
-                                                      >
-                                                        Kind regards,
-                                                      </p>
-                                                      <p
-                                                        style="
-                                                          margin: 0;
-                                                          font-family: arial,
-                                                            'helvetica neue',
-                                                            helvetica,
-                                                            sans-serif;
-                                                          line-height: 24px;
-                                                          color: #333333;
-                                                          font-size: 16px;
-                                                        "
-                                                      >
-                                                        PipVora Team
-                                                      </p>
-                                                    </td>
-                                                  </tr>
-                                                </tbody>
-                                              </table>
-                                            </td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <table
-                        cellpadding="0"
-                        cellspacing="0"
-                        align="center"
-                        style="
-                          border-collapse: collapse;
-                          border-spacing: 0px;
-                          table-layout: fixed !important;
-                          width: 100%;
-                          background-color: transparent;
-                          background-repeat: repeat;
-                          background-position: center top;
-                        "
-                      >
-                        <tbody>
-                          <tr>
-                            <td align="center" style="padding: 0; margin: 0">
-                              <table
-                                bgcolor="#ffffff"
-                                align="center"
-                                cellpadding="0"
-                                cellspacing="0"
-                                style="
-                                  border-collapse: collapse;
-                                  border-spacing: 0px;
-                                  background-color: #ffffff;
-                                  width: 600px;
-                                "
-                              >
-                                <tbody>
-                               
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff; padding:0; margin-top:20px;">
+  <tr>
+    <td align="center" style="padding:20px 0 0 0;">
+      
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:auto;">
+        <tr>
+          <td style="border-top:1px solid #e5e5e5; padding-top:16px;">
+
+            <p style="
+                margin:0;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size:13px;
+                color:#666666;
+                line-height:20px;
+                text-align:center;
+            ">
+              This is an automated message, please do not reply.  
+              For support, contact:
+              <a href="mailto:support@4xmeta.com" style="color:#3b82f6; text-decoration:none; font-weight:600;">support@4xmeta.com</a>
+            </p>
+
+            <p style="
+                margin:10px 0 0 0;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size:12px;
+                color:#999999;
+                text-align:center;
+            ">
+              © 2025 <strong>4xMeta</strong>. All rights reserved.
+            </p>
+
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+</table>
 `;
 
 module.exports = footer;

@@ -314,7 +314,7 @@ const handleEmailVerificationOtp = async (req, res) => {
         from: process.env.WEBSITE_MAIL,
         to: user.email,
         subject: "Verify Your Email",
-        html: verification(randomOtp, user.first_name),
+        html: verification(randomOtp, user.first_name ? user.first_name : user.telegram.first_name),
       });
 
       return res.status(200).json({
