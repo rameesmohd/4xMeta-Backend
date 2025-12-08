@@ -6,25 +6,28 @@ import { sendMessageSafe } from "../utils/sendBotMessage.js";
 cron.schedule("*/20 * * * * *", async () => {
   console.log("⏱ Checking scheduled messages...");
 
-  const scheduled = await ScheduledMessage.find({ isActive: true });
+  const now = new Date();
+
+  // Only pick messages where time has come and not sent previously
+  const scheduled = await ScheduledMessage.find({
+    isActive: true,
+    sendAt: { $lte: now },
+    isSend: false,
+  });
 
   for (let msg of scheduled) {
-    console.log(msg);
-    
-    const cutoff = new Date(msg.createdAt.getTime() + msg.delayMinutes * 60000);
-    if (new Date() < cutoff) {
-      console.log("⏳ Waiting for delay:", msg.delayMinutes, "min");
-      continue;
-    }
-
     let targets = [];
-    
+
     if (msg.audience === "all") {
       targets = await BotUser.find();
     } else if (msg.audience === "single" && msg.singleUserId) {
       targets = [{ telegramId: msg.singleUserId }];
     }
 
+    const totalTargets = targets.length;
+    console.log(`📨 Sending message ${msg._id} to ${totalTargets} users`);
+
+    // Send to users
     targets.forEach((user) => {
       const chatId = user.telegramId || user.id;
       if (!chatId) return console.log("⚠ No chat_id found, skipping user");
@@ -39,11 +42,11 @@ cron.schedule("*/20 * * * * *", async () => {
         },
       };
 
-      const media = msg.fileId || msg.content; // support both fields
+      const media = msg.fileId;
 
       switch (msg.type) {
         case "text":
-          payload.text = msg.caption || msg.content;
+          payload.text = msg.caption || "";
           sendMessageSafe("sendMessage", payload);
           break;
 
@@ -56,9 +59,9 @@ cron.schedule("*/20 * * * * *", async () => {
 
         case "video":
           if (!media) return console.log("⚠ Video missing, skipped");
-            payload.video = media;
-            payload.caption = msg.caption || "";
-            sendMessageSafe("sendVideo", payload);
+          payload.video = media;
+          payload.caption = msg.caption || "";
+          sendMessageSafe("sendVideo", payload);
           break;
 
         case "audio":
@@ -72,5 +75,15 @@ cron.schedule("*/20 * * * * *", async () => {
           console.log("⚠ Unknown type:", msg.type);
       }
     });
+
+    // Update database after sending
+    msg.isSend = true;
+    msg.isActive = false;
+    msg.sentCount = totalTargets;
+    msg.sentAt = new Date();
+
+    await msg.save();
+
+    console.log(`✅ Completed sending message ${msg._id} to ${totalTargets} users`);
   }
 });

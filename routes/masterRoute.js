@@ -21,7 +21,13 @@ const {
     } =require('../controllers/master/masterController')
 const { fetchAddressBalance } = require('../controllers/userTele/paymentController')
 const {verifyToken} = require('../middlewares/masterAuth')
-const { createMessage,listMessages,toggleMessage } = require('../controllers/bot/schedulerController')
+const { 
+    createMessage,
+    listMessages,
+    toggleMessage, 
+    updateMessage, 
+    deleteMessage 
+} = require('../controllers/bot/schedulerController')
 
 
 router.post('/login',masterLogin)
@@ -58,10 +64,11 @@ router.post('/add-to-wallet',addToWallet)
 router.post('/send-email',sendEmail)
 router.post('/change-email',changeUserEmail)
 
-router.post('/schedule/create',createMessage)
 router.get('/schedule/list',listMessages)
+router.post('/schedule/create',createMessage)
 router.patch('/schedule/toggle/:id',toggleMessage)
-
+router.patch("/schedule/update/:id", updateMessage)
+router.patch("/schedule/delete/:id", deleteMessage)
 
 router.get('/logout',masterLogout)
 

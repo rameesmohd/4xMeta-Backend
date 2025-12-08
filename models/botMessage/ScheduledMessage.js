@@ -6,10 +6,12 @@ const scheduledMessageSchema = new mongoose.Schema(
     caption: { type: String },
     fileId: { type: String },
     buttons: [{ text: String, url: String }],
-    delayMinutes: { type: Number, required: true },
+    sendAt: { type: Date, required: true }, // exact time to send
     audience: { type: String, enum: ["all", "new", "single"], default: "all" },
     singleUserId: { type: String, default: null },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false },
+    isSend : { type: Boolean,default : false},
+    totalSent : { type : Number , default : 0}
   },
   { timestamps: true }
 );

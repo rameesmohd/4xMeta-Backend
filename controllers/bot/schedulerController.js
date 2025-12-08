@@ -21,8 +21,20 @@ const toggleMessage = async (req, res) => {
   res.json(msg);
 };
 
+const updateMessage = async (req, res) => {
+  await ScheduledMessage.findByIdAndUpdate(req.params.id, req.body);
+  res.json({ success: true });
+};
+
+const deleteMessage = async(req,res)=>{
+    await ScheduledMessage.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+}
+
 module.exports = {
     createMessage,
     listMessages,
-    toggleMessage
+    toggleMessage,
+    updateMessage,
+    deleteMessage
 }
