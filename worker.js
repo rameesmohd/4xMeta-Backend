@@ -10,4 +10,4 @@ require('./cron/rolloverService.js')
 require('./cron/intervalservice.js')
 
 require('./cron/broadcastWorker.js')
-// require('./cron/dailyProfitAlert.js')
+require('./cron/dailyProfitAlert.js')

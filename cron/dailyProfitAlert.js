@@ -137,6 +137,20 @@ const sendMessageToUser = async (user, manager, managerProfit, userProfit, hasIn
   const profitEmoji = userProfit >= 0 ? "📈" : "📉";
   const managerProfitEmoji = managerProfit >= 0 ? "✅" : "❌";
   
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: hasInvested 
+            ? "📊 View My Portfolio"
+            : "🚀 Start Investing",
+          url: process.env.WEBAPP_URL
+        }
+      ]
+    ]
+  };
+
+
   let text = `
 ${profitEmoji} *Daily Trading Summary*
 
@@ -168,7 +182,8 @@ Start copying this manager’s trades and grow your capital with professional st
     await sendMessageSafe("sendMessage", {
       chat_id: chatId,
       parse_mode: "Markdown",
-      text: text.trim()
+      text: text.trim(),
+      reply_markup: replyMarkup
     });
     return true;
   } catch (error) {
@@ -178,10 +193,10 @@ Start copying this manager’s trades and grow your capital with professional st
 };
 
 //-----------Test in each 20 Sec-----------------------------------------
-cron.schedule("*/20 * * * * *", async () => {
+// cron.schedule("*/20 * * * * *", async () => {
 
 //-----------At 11:00 PM daily--------------
-// cron.schedule("0 23 * * *", async () => {
+cron.schedule("0 23 * * *", async () => {
   try {
     // Fetch all managers
     const managers = await managerModel.find({ /* add filter if needed, e.g., is_active: true */ });
@@ -213,10 +228,10 @@ cron.schedule("*/20 * * * * *", async () => {
       const managerProfit = await fetchManagerProfitToday(manager._id);
 
       // Only process if manager had any activity today
-      //  if (managerProfit === 0) {
-      //     console.log(`⏭️ Skipping - no profit/loss for manager ${manager.nickname}`);
-      //     continue;
-      //  }  
+      // if (managerProfit === 0) {
+      //   console.log(`⏭️ Skipping - no profit/loss for manager ${manager.nickname}`);
+      //   continue;
+      // }  
 
       // Batch fetch all user profits for this manager (much faster than individual queries)
       const webAppUserIds = webAppUsers.map(u => u._id);
