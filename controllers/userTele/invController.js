@@ -298,14 +298,14 @@ const getWithdrawSummary= async(req,res)=> {
       depositsLocked += amt;
       lockedDepositsArr.push({
         amount: toTwoDecimals(amt),
-        deposited_at: d.deposited_at || d.depositedAt || d.createdAt,
+        deposited_at: d.deposited_at || d.createdAt,
         unlocked_at: d.unlocked_at || null,
         lock_duration: d.lock_duration || liquidityDays || null,
       });
     } else {
       unlockedDepositsArr.push({
         amount: toTwoDecimals(amt),
-        deposited_at: d.deposited_at || d.depositedAt || d.createdAt,
+        deposited_at: d.deposited_at || d.createdAt,
         unlocked_at: d.unlocked_at || null,
         lock_duration: d.lock_duration || liquidityDays || null,
       });
