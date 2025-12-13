@@ -1,11 +1,34 @@
 const mongoose = require("mongoose");
 
+const buttonSchema = new mongoose.Schema(
+  {
+    text: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    type: {
+      type: String,
+      enum: ["url", "webapp"],
+      default: "url"
+    },
+    url: {
+      type: String,
+      required: true
+    }
+  },
+  { _id: false }
+);
+
 const scheduledMessageSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ["text", "audio", "video", "image"], required: true },
     caption: { type: String },
     fileId: { type: String },
-    buttons: [{ text: String, url: String }],
+    buttons: {
+      type: [buttonSchema],
+      default: []
+    },
 
     // when to send next
     sendAt: { type: Date, required: true },
@@ -33,7 +56,7 @@ const scheduledMessageSchema = new mongoose.Schema(
     },
     singleUserId: { type: String, default: null },
 
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false },
     isSend: { type: Boolean, default: false }, // only meaningful for 'once'
     sentCount: { type: Number, default: 0 },
   },

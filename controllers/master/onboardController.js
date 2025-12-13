@@ -52,7 +52,7 @@ const deleteOnboardMessage = async (req, res) => {
 const toggleOnboardMessage = async (req, res) => {
   try {
     const msg = await OnboardingMessage.findById(req.params.id);
-    msg.sent = !msg.sent;
+    msg.isActive = !msg.isActive;
     await msg.save();
     res.json(msg);
   } catch (err) {

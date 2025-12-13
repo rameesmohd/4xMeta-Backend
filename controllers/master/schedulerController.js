@@ -15,6 +15,7 @@ const createScheduledMessage = async (req, res) => {
       data: message,
     });
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ success: false, error: error.message });
   }
 };
