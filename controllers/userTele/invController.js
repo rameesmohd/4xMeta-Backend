@@ -458,8 +458,8 @@ const handleInvestmentWithdrawal = async (req, res) => {
 
     const availableEquity = toTwoDecimals(
         Number(investment.total_equity) -
-        Number(totalRecentDeposits || 0) -
-        Number(investment.current_interval_profit || 0)
+        Number(totalRecentDeposits) -
+        Number(investment.current_interval_profit)
       );
 
     // Format from/to IDs
