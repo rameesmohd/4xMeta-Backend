@@ -2,6 +2,7 @@ const {TronWeb}  = require('tronweb');
 const depositsModel = require('../../models/deposit');
 const userTransactionModel = require('../../models/userTx')
 const userModel = require('../../models/user')
+const {sendUserDepositAlert} =require("../../controllers/bot/botAlerts")
 
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
@@ -179,6 +180,23 @@ const trc20CheckAndTransferPayment = async (req, res) => {
         },
         { new: true, select: "-password" }
       );
+
+      if(updatedUserData){
+        if(updatedUserData.login_type==="login_type"){
+          sendUserDepositAlert({
+            user : {
+              first_name: updatedUserData?.telegram.first_name,
+              last_name: updatedUserData?.telegram.last_name,
+              username: updatedUserData?.telegram.username,
+          telegramId: updatedUserData?.telegram.id,
+          },
+          amount : amountToCredit,
+          currency: "USDT",
+          txid : newUserTransaction.transaction_id,
+          createdAt: newUserTransaction.createdAt
+        })
+        }
+      }
 
       return res.status(200).json({
         status: "success",
@@ -370,7 +388,7 @@ const bep20CheckAndTransferPayment = async (req,res) => {
             }
 
             
-            const newUserTrasaction = new userTransactionModel({
+            const newUserTransaction = new userTransactionModel({
                 user: proccessingPayment.user,
                 type: 'deposit',
                 payment_mode : 'USDT-BEP20',
@@ -378,7 +396,7 @@ const bep20CheckAndTransferPayment = async (req,res) => {
                 description : 'Deposit from BEP20 wallet',
                 transaction_id : proccessingPayment.transaction_id
             });
-            await newUserTrasaction.save()
+            await newUserTransaction.save()
 
             const updatedUserData = await userModel.findOneAndUpdate(
               { _id: userData._id },
@@ -388,14 +406,30 @@ const bep20CheckAndTransferPayment = async (req,res) => {
               { new: true, select: '-password' }
             );
 
+             if(updatedUserData){
+              if(updatedUserData.login_type==="login_type"){
+                sendUserDepositAlert({
+                  user : {
+                    first_name: updatedUserData?.telegram.first_name,
+                    last_name: updatedUserData?.telegram.last_name,
+                    username: updatedUserData?.telegram.username,
+                telegramId: updatedUserData?.telegram.id,
+                },
+                amount : amountToCredit,
+                currency: "USDT",
+                txid : newUserTransaction.transaction_id,
+                createdAt: newUserTransaction.createdAt
+              })
+              }
+            }
+
             //trasfer to company wallet logic here--
-            
             return res.status(200).json({ 
                 status: 'success' ,
                 amount : amountToCredit,
                 transaction_id: proccessingPayment.transaction_id,
                 userData : updatedUserData,
-                date : newUserTrasaction.createdAt
+                date : newUserTransaction.createdAt
             });
         }
         return res.status(200).json({ status: 'failure', message: 'Payment not completed.' });

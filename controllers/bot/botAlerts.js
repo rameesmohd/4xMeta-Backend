@@ -68,7 +68,33 @@ const sendKycRequestedAlert = async ({ user = {}, kycLevel = "Standard", request
   await sendTelegramAlert(caption);
 };
 
+const sendUserDepositAlert = async ({
+  user = {},
+  amount = 0,
+  currency = "USD",
+  paymentMethod = "-",
+  txid = "-",
+  createdAt = new Date()
+} = {}) => {
+  const fullName =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "-";
+
+  const caption =
+`💰 *New Deposit Received*\n
+👤 *Name:* ${escapeMarkdown(fullName)}\n
+🔗 *Username:* @${escapeMarkdown(user.username || "-")}\n
+🆔 *Telegram ID:* ${escapeMarkdown(user.telegramId || "-")}\n
+💵 *Amount:* ${escapeMarkdown(`${Number(amount).toFixed(2)} ${currency}`)}\n
+💳 *Method:* ${escapeMarkdown(paymentMethod)}\n
+🧾 *TxID:* ${escapeMarkdown(txid)}\n
+📅 *Deposited At:* ${escapeMarkdown(new Date(createdAt).toISOString())}\n`;
+
+  await sendTelegramAlert(caption);
+};
+
+
 module.exports = {
   sendNewBotUserAlert,
   sendKycRequestedAlert,
+  sendUserDepositAlert
 };
