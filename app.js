@@ -104,12 +104,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true })); 
 app.use(cookieParser());
 
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, 
-  max: 100 
+const apiLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 500, // 👈 was 100
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-app.use('/api', limiter);
+app.use('/api', apiLimiter);
 
 app.use('/api/master',masterRoute);
 app.use('/api/manager',managerRoute);

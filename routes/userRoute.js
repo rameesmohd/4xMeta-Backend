@@ -9,12 +9,18 @@ const manager = require('../controllers/manager/managerController')
 const chart = require('../controllers/chartController');
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const upload = require('../config/multer');
+const { default: rateLimit } = require('express-rate-limit');
 
 router.post('/test',auth.userlog)
 
-router.post('/user',auth.teleUser)
+const strictLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+});
 
-router.get('/list-countries',fetchCountryList)
+router.post('/user',strictLimiter,auth.teleUser)
+
+router.get('/list-countries',strictLimiter,fetchCountryList)
 
 router.use(verifyUser)
 
