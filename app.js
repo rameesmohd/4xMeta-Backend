@@ -41,26 +41,39 @@ const allowedOrigins = [
   'https://www.4xmeta.com',
   'https://api.4xmeta.com',
   'https://app.4xmeta.com',
-  'https://admin.4xmeta.com'
+  'https://admin.4xmeta.com',
+  'https://web.telegram.org'
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
+    if (process.env.NODE_ENV !== "production") {
       console.log(`❌ CORS blocked request from: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
     }
+
+    // Allow requests with no origin (mobile apps, telegram, curl, server-side)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log(`❌ CORS blocked request from: ${origin}`);
+    return callback(null, false); // ❗ DO NOT throw error
   },
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+  ],
   optionsSuccessStatus: 204,
-  maxAge: 86400
+  maxAge: 86400,
 };
 
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
+
 app.use(express.json({ limit: "10mb" })); 
 app.use(express.urlencoded({ limit: "10mb", extended: true })); 
 app.use(cookieParser());
