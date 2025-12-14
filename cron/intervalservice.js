@@ -14,5 +14,4 @@ cron.schedule("59 23 * * 6", async () => {
     timezone: "UTC"
 });
 
-
-handleInterval();
+// handleInterval();

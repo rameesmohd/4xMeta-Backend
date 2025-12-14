@@ -124,7 +124,7 @@ const intervalHandle = async (intervalId = null) => {
           filter: { _id: inv._id },
           update: {
             $inc: {
-              // total_equity: netProfit,
+              total_equity: -perfFee,
               net_profit: netProfit,
               performance_fee_paid: perfFee,
             },

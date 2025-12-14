@@ -228,8 +228,8 @@ const fetchInvTransactions = async (req, res) => {
 // safe rounding for finance (2 decimals)
 const toTwoDecimals = (v) => {
   const n = Number(v);
-  if (isNaN(n)) return 0;
-  return Math.round(n * 100) / 100;
+  if (!Number.isFinite(n)) return 0;
+  return Math.trunc(n * 100) / 100;
 };
 
 const getWithdrawSummary= async(req,res)=> {
@@ -446,7 +446,7 @@ const handleInvestmentWithdrawal = async (req, res) => {
     if (!investment)
       return res.status(400).json({ errMsg: "Investment not found." });
     
-    const user = await UserModel.findById(investment.user);
+    const user = await UserModel.findById(userId);
 
     if (!user)
       return res.status(400).json({ errMsg: "User not found." });
