@@ -47,10 +47,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`❌ CORS blocked request from: ${origin}`);
-    }
-
     // Allow requests with no origin (mobile apps, telegram, curl, server-side)
     if (!origin) return callback(null, true);
 
