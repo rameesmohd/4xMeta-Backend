@@ -35,37 +35,67 @@ app.use(helmet({
 
 app.set('trust proxy', 1);
 
+// const allowedOrigins = [
+//   'http://localhost:5173',
+//   'http://localhost:3001',
+//   'https://www.4xmeta.com',
+//   'https://api.4xmeta.com',
+//   'https://app.4xmeta.com',
+//   'https://admin.4xmeta.com',
+//   'https://web.telegram.org'
+// ];
+
+// const corsOptions = {
+//   origin: (origin, callback) => {
+//     if (!origin) {
+//       console.log(`No origin request`);
+//       return callback(null, true);
+//     }
+
+//     if (allowedOrigins.includes(origin)) {
+//       return callback(null, true);
+//     }
+
+//     console.log(`❌ CORS blocked request from: ${origin}`);
+//     return callback(null, false); // ❗ DO NOT throw error
+//   },
+//   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+//   credentials: true,
+//   allowedHeaders: [
+//     "Content-Type",
+//     "Authorization",
+//     "X-Requested-With",
+//   ],
+//   optionsSuccessStatus: 204,
+//   maxAge: 86400,
+// };
+
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3001',
-  'https://www.4xmeta.com',
-  'https://api.4xmeta.com',
-  'https://app.4xmeta.com',
-  'https://admin.4xmeta.com',
-  'https://web.telegram.org'
+  "http://localhost:5173",
+  "http://localhost:3001",
+  "https://www.4xmeta.com",
+  "https://api.4xmeta.com",
+  "https://app.4xmeta.com",
+  "https://admin.4xmeta.com",
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, telegram, curl, server-side)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.startsWith("https://web.telegram.org")
+    ) {
       return callback(null, true);
     }
 
     console.log(`❌ CORS blocked request from: ${origin}`);
-    return callback(null, false); // ❗ DO NOT throw error
+    return callback(new Error("Not allowed by CORS"));
   },
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
   credentials: true,
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-  ],
-  optionsSuccessStatus: 204,
-  maxAge: 86400,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 app.use(cors(corsOptions));
@@ -87,15 +117,20 @@ app.use('/api/bot',botRoute);
 app.use('/api',userRoute);
 
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    if (err.message === 'Not allowed by CORS') {
-      res.status(403).send('CORS policy does not allow access from this origin');
-    } else {
-      console.log("App global err : ", err  );
-      
-      res.status(500).send('Something broke!');
-    }
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      success: false,
+      message: "CORS policy does not allow access from this origin",
+    });
+  }
+
+  console.error("Global error:", err);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
 });
+
 
 app.listen(process.env.PORT, () => {
     console.log(`app listening at http://localhost:${process.env.PORT}`);

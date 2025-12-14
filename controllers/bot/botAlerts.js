@@ -43,7 +43,7 @@ const sendNewBotUserAlert = async (user = {}) => {
   const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "-";
 
   const caption = 
-`✅ *New Bot User Joined*\n
+`✅ *NEW BOT USER*\n
 👥 *Total Users:* ${escapeMarkdown(String(count))}\n
 👤 *Name:* ${escapeMarkdown(fullName)}\n
 🔗 *Username:* @${escapeMarkdown(user.username || "-")}\n
@@ -57,7 +57,7 @@ const sendKycRequestedAlert = async ({ user = {}, kycLevel = "Standard", request
   const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "-";
 
   const caption =
-`📝 *New KYC Request*\n
+`📝 *NEW KYC REQUEST*\n
 👤 *Name:* ${escapeMarkdown(fullName)}\n
 🔗 *Username:* @${escapeMarkdown(user.username || "-")}\n
 🆔 *Telegram ID:* ${escapeMarkdown(user.telegramId || "-")}\n
@@ -79,15 +79,30 @@ const sendUserDepositAlert = async ({
   const fullName =
     `${user.first_name || ""} ${user.last_name || ""}`.trim() || "-";
 
-  const caption =
-`💰 *New Deposit Received*\n
-👤 *Name:* ${escapeMarkdown(fullName)}\n
-🔗 *Username:* @${escapeMarkdown(user.username || "-")}\n
-🆔 *Telegram ID:* ${escapeMarkdown(user.telegramId || "-")}\n
-💵 *Amount:* ${escapeMarkdown(`${Number(amount).toFixed(2)} ${currency}`)}\n
-💳 *Method:* ${escapeMarkdown(paymentMethod)}\n
-🧾 *TxID:* ${escapeMarkdown(txid)}\n
-📅 *Deposited At:* ${escapeMarkdown(new Date(createdAt).toISOString())}\n`;
+  const caption = `
+💰 *DEPOSIT CONFIRMATION*
+────────────────────
+👤 *Client:* ${escapeMarkdown(fullName)}
+🔗 *Username:* ${user.username ? `@${escapeMarkdown(user.username)}` : "—"}
+🆔 *Telegram ID:* ${escapeMarkdown(user.telegramId || "—")}
+
+💵 *Amount:* ${escapeMarkdown(`${Number(amount).toFixed(2)} ${currency}`)}
+💳 *Payment Method:* ${escapeMarkdown(paymentMethod)}
+
+🧾 *Transaction ID:*
+${escapeMarkdown(txid)}
+
+📅 *Date:* ${escapeMarkdown(
+  new Date(createdAt).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+)}
+────────────────────
+`;
 
   await sendTelegramAlert(caption);
 };

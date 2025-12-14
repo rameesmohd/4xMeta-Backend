@@ -140,12 +140,14 @@ const trc20CheckAndTransferPayment = async (req, res) => {
 
     // If user has enough balance
     if (balance >= 50) {
+      const amountToCredit = Math.round(balance * 100) / 100;
 
       // Mark deposit as approved
       const processingPayment = await depositsModel.findOneAndUpdate(
         { _id: deposit_id },
         {
           $set: {
+            amount : amountToCredit,
             status: "approved",
             is_payment_recieved: true,
           },
@@ -157,8 +159,6 @@ const trc20CheckAndTransferPayment = async (req, res) => {
       if (!userData) {
         return res.status(402).json({ message: "User not found" });
       }
-
-      const amountToCredit = Math.round(balance * 100) / 100;
 
       // Save transaction history
       const newUserTransaction = new userTransactionModel({
@@ -182,18 +182,17 @@ const trc20CheckAndTransferPayment = async (req, res) => {
       );
 
       if(updatedUserData){
-        if(updatedUserData.login_type==="login_type"){
+        if(updatedUserData.login_type==="telegram"){
           sendUserDepositAlert({
             user : {
               first_name: updatedUserData?.telegram.first_name,
               last_name: updatedUserData?.telegram.last_name,
               username: updatedUserData?.telegram.username,
-          telegramId: updatedUserData?.telegram.id,
+              telegramId: updatedUserData?.telegram.id,
           },
           amount : amountToCredit,
           currency: "USDT",
           txid : newUserTransaction.transaction_id,
-          createdAt: newUserTransaction.createdAt
         })
         }
       }
@@ -407,13 +406,13 @@ const bep20CheckAndTransferPayment = async (req,res) => {
             );
 
              if(updatedUserData){
-              if(updatedUserData.login_type==="login_type"){
+              if(updatedUserData.login_type==="telegram"){
                 sendUserDepositAlert({
                   user : {
                     first_name: updatedUserData?.telegram.first_name,
                     last_name: updatedUserData?.telegram.last_name,
                     username: updatedUserData?.telegram.username,
-                telegramId: updatedUserData?.telegram.id,
+                  telegramId: updatedUserData?.telegram.id,
                 },
                 amount : amountToCredit,
                 currency: "USDT",
