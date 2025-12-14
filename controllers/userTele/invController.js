@@ -456,14 +456,18 @@ const handleInvestmentWithdrawal = async (req, res) => {
      * ----------------------------------------- */
     const { totalRecentDeposits } = getDepositsInLastTradingDays(investment);
 
-    const availableEquity = Number(investment.total_equity) - Number(totalRecentDeposits);
+    const availableEquity = toTwoDecimals(
+        Number(investment.total_equity) -
+        Number(totalRecentDeposits || 0) -
+        Number(investment.current_interval_profit || 0)
+      );
 
     // Format from/to IDs
     const fromInvestment = `INV_${investment.inv_id}`;
     const toWallet = `WALL_${user.wallets.main_id || "UNKNOWN"}`;
 
     /** -----------------------------------------
-     * CASE 1: Amount is available (unlocked equity + profit after interval)
+     * CASE 1: Amount is available (unlocked equity)
      * ----------------------------------------- */
     if (amount <= availableEquity) {
       
@@ -495,7 +499,7 @@ const handleInvestmentWithdrawal = async (req, res) => {
      * CASE 2: Liquidity period blocks withdrawal
      * User has funds, but recent deposits are locked
      * ----------------------------------------- */
-    if (amount < Number(investment.total_equity)) {
+    if (amount > Number(availableEquity)) {
       const rejectTx = new InvestmentTransaction({
         user: investment.user,
         investment: investment._id,
