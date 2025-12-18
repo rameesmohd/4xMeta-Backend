@@ -31,15 +31,14 @@ const teleUser = async (req, res) => {
       });
     }
 
-    // Check existing user
-    let user = await userModel.findOne({ user_id: id });
-    // console.log(user);
-    
-    const botUser = await botModel.findOne({id})
+    const [user, botUser] = await Promise.all([
+      userModel.findOne({ user_id: id }).lean(),
+      botModel.findOne({ id }).lean()
+    ]);
 
     // HANDLE MESSAGE TO BOT SCHEDULE
     if(botUser && !botUser.is_opened_webapp){
-        await botModel.findOneAndUpdate({id},{is_opened_webapp : true})
+        botModel.updateOne({id},{is_opened_webapp:true}).catch(console.error);
     }
 
     /* ------------------------------------------------------
@@ -98,7 +97,7 @@ const teleUser = async (req, res) => {
     const newUser = await tempUser.save();
 
     if (referred_by) {
-      await userModel.findByIdAndUpdate(referred_by, {
+      userModel.findByIdAndUpdate(referred_by, {
         $push: { "referral.referrals": newUser._id },
         $inc: { "referral.total_referrals": 1 },
       });

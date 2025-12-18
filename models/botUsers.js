@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const botUserSchema = new Schema(
   {
-    id: { type: Number, required: true, unique: true, index: true },
+    id: { type: Number, required: true, unique: true },
     username: { type: String, default: null },
     first_name: { type: String, default: null },
     last_name: { type: String, default: null },
