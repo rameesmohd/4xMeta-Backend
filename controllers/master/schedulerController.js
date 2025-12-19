@@ -23,7 +23,7 @@ const createScheduledMessage = async (req, res) => {
 // Get all scheduled messages
 const getScheduledMessages = async (req, res) => {
   try {
-    const messages = await ScheduledMessage.find().sort({ order: 1 });
+    const messages = await ScheduledMessage.find({}).sort({ order: 1 });
     return res.status(200).json({ success: true, data: messages });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });

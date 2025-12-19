@@ -41,11 +41,10 @@ const saveUser = async (req, res) => {
 
 const getOnboardMessages = async (req, res) => {
   try {
-    const data = await OnboardingMessage.find().sort({ order: 1 });
+    const data = await OnboardingMessage.find().sort({ order: 1,isActive : true});
     res.json(data);
   } catch (err) {
     console.log(err);
-    
     res.status(500).json({ error: err.message });
   }
 }
