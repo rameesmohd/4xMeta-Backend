@@ -32,7 +32,7 @@ const teleUser = async (req, res) => {
     }
 
     const [user, botUser] = await Promise.all([
-      userModel.findOne({ user_id: id }).lean(),
+      userModel.findOne({ user_id: id }),
       botModel.findOne({ id }).lean()
     ]);
 
@@ -46,8 +46,10 @@ const teleUser = async (req, res) => {
     ------------------------------------------------------ */
     if (user) {
       const token = createToken(user._id);
-      user.currToken = token;
-      await user.save();
+      await userModel.updateOne(
+        { _id: user._id },
+        { $set: { currToken: token } }
+      );
 
       return res
         .cookie("userToken", token, {
