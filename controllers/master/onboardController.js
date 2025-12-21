@@ -82,7 +82,7 @@ const testOnboardMessage=async(req,res)=>{
  
      await sendTestMessage(msg);
  
-     return res.json({ success: true, message: "Test message sent" });
+     return res.status(200).json({ success: true, message: "Test message sent" });
    } catch (err) {
      console.error("Test message error:", err);
      return res.status(500).json({ success: false });

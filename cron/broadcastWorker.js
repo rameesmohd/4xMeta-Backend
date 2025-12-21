@@ -3,7 +3,8 @@ const BotUser =require("../models/botUsers.js");
 const ScheduledMessage =require("../models/botMessage/ScheduledMessage.js");
 const { sendMessageSafe } =require("../utils/sendBotMessage.js");
 const getNextSendAt = require('../utils/getNextSendAt.js')
-const getAudienceUsers = require('../utils/getAudience.js')
+const getAudienceUsers = require('../utils/getAudience.js');
+const { convertToTelegramHtml } = require("../utils/convertToTelegramHtml.js");
 let isBroadcastRunning = false;
 //-----------TEST 20 Sec--------------------
 // cron.schedule("*/20 * * * * *", async () => {
@@ -41,6 +42,10 @@ cron.schedule("0 0 * * * *", async () => {
       const targets = await getAudienceUsers(msg);
       const totalTargets = targets.length;
 
+      // ✅ Convert HTML to Telegram format
+      const telegramCaption = msg.caption ? convertToTelegramHtml(msg.caption) : "";
+      
+
       if (!totalTargets) {
         console.log(`⚠ No users found for audience "${msg.audience}". Skipping send.`);
       } else {
@@ -75,7 +80,7 @@ cron.schedule("0 0 * * * *", async () => {
 
           switch (msg.type) {
             case "text":
-              payload.text = msg.caption || "";
+              payload.text = telegramCaption || "";
               sendMessageSafe("sendMessage", payload);
               break;
 
@@ -85,7 +90,7 @@ cron.schedule("0 0 * * * *", async () => {
                 continue;
               }
               payload.photo = media;
-              payload.caption = msg.caption || "";
+              payload.caption = telegramCaption;
               sendMessageSafe("sendPhoto", payload);
               break;
 
@@ -95,7 +100,7 @@ cron.schedule("0 0 * * * *", async () => {
                 continue;
               }
               payload.video = media;
-              payload.caption = msg.caption || "";
+               payload.caption = telegramCaption;
               sendMessageSafe("sendVideo", payload);
               break;
 
@@ -105,7 +110,7 @@ cron.schedule("0 0 * * * *", async () => {
                 continue;
               }
               payload.audio = media;
-              payload.caption = msg.caption || "";
+              payload.caption = telegramCaption;
               sendMessageSafe("sendAudio", payload);
               break;
 
