@@ -11,7 +11,11 @@ const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const upload = require('../config/multer');
 const { default: rateLimit } = require('express-rate-limit');
 
-router.post('/test',auth.userlog)
+router.get("/ping",(req,res)=>{
+      res.status(200).json({ok : true})
+})
+
+// router.post('/test',auth.userlog)
 
 const strictLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
