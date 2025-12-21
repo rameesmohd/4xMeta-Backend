@@ -114,6 +114,7 @@ const intervalHandle = async (intervalId = null) => {
             status: "approved",
             amount: inviterShare,
             description: `Weekly rebate distributed`,
+            transaction_id: "TX-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
           });
         }
       }
