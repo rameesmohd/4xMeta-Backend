@@ -17,7 +17,7 @@ const footer = () => `
             ">
               This is an automated message, please do not reply.  
               For support, contact:
-              <a href="mailto:support@4xmeta.com" style="color:#3b82f6; text-decoration:none; font-weight:600;">support@4xmeta.com</a>
+              <a href="mailto:${SUPPORT_MAIL}" style="color:#3b82f6; text-decoration:none; font-weight:600;">${SUPPORT_MAIL}</a>
             </p>
 
             <p style="
@@ -27,7 +27,7 @@ const footer = () => `
                 color:#999999;
                 text-align:center;
             ">
-              © 2025 <strong>4xMeta</strong>. All rights reserved.
+              © 2025 <strong>${APP_NAME}</strong>. All rights reserved.
             </p>
 
           </td>

@@ -1,5 +1,7 @@
 const footer = require("./footer");
 const header = require("./header");
+const APP_NAME = process.env.APP_NAME || "-"
+const SUPPORT_MAIL = process.env.SUPPORT_MAIL || "-"
 
 const emailTemplate = (body) => `
 <!DOCTYPE html>
@@ -55,9 +57,9 @@ const emailTemplate = (body) => `
             flex-direction: column!important;
             justify-content: center;
             align-items: center;!important">
-              ${header()}
+              ${header(APP_NAME)}
               ${body}      
-              ${footer()}
+              ${footer(APP_NAME,SUPPORT_MAIL)}
         </div>
               </td>
           </tr>

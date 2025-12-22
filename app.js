@@ -35,22 +35,25 @@ app.use(helmet({
 
 app.set('trust proxy', 1);
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3001",
-  "https://www.4xmeta.com",
-  "https://api.4xmeta.com",
-  "https://app.4xmeta.com",
-  "https://admin.4xmeta.com",
-];
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   "http://localhost:3001",
+//   "https://www.4xmeta.com",
+//   "https://api.4xmeta.com",
+//   "https://app.4xmeta.com",
+//   "https://admin.4xmeta.com",
+// ];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : [];
 
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
     if (
-      allowedOrigins.includes(origin) ||
-      origin.startsWith("https://web.telegram.org")
+      allowedOrigins.includes(origin) || origin.startsWith("https://web.telegram.org")
     ) {
       return callback(null, true);
     }

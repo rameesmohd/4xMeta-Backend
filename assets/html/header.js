@@ -1,4 +1,4 @@
-const header = () => `
+const header = (APP_NAME) => `
 <table
   width="100%"
   cellspacing="0"
@@ -34,7 +34,7 @@ const header = () => `
                 text-transform: uppercase;
               "
             >
-              4x<span style="color:#3b82f6;">Meta</span>
+              ${APP_NAME}
             </p>
 
             <!-- Tagline -->
