@@ -324,6 +324,7 @@ const fetchManagerTransactions = async (req, res) => {
     // Build query
     const query = {
       manager: manager_id,
+      status : "success",
       ...(filter !== "all" && { type: filter }), // filter: deposit / withdrawal
     };
 
