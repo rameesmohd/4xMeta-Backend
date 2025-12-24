@@ -155,11 +155,11 @@ const sendMessageToUser = async (user, manager, managerProfit, userProfit, hasIn
 ${profitEmoji} *Daily Trading Summary*
 
 👨‍💼 *Manager:* @${manager.nickname || manager.name}
-${managerProfitEmoji} *Manager’s Profit Today:* $${managerProfit.toFixed(2)}
+${managerProfitEmoji} *Manager’s Profit Today:* $${managerProfit.toFixed(2) || "0.00"}
 
 ${hasInvested 
   ? `
-${profitEmoji} *Your Profit Share:* $${userProfit.toFixed(2)}
+${profitEmoji} *Your Profit Share:* $${userProfit.toFixed(2) || "0.00"}
 
 ${userProfit > 0 
     ? "🎉 *Great performance today!* Your portfolio grew successfully."
@@ -187,7 +187,7 @@ Start copying this manager’s trades and grow your capital with professional st
     });
     return true;
   } catch (error) {
-    console.error(`❌ Failed to send message to user ${user._id || user.id}:`, error.message);
+    console.error(`❌ Failed to send message to user ${user._id || user.id}:`, error);
     return false;
   }
 };
@@ -197,6 +197,7 @@ Start copying this manager’s trades and grow your capital with professional st
 
 //-----------At 11:00 PM daily--------------
 cron.schedule("0 23 * * *", async () => {
+  console.log("⏱️ Daily alert cron triggered");
   try {
     // Fetch all managers
     const managers = await managerModel.find();
