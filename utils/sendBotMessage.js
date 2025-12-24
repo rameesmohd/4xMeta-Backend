@@ -27,7 +27,7 @@ const processQueue = async () => {
         queue.unshift(job);
         await delay(retryAfter);
       } else {
-        console.log("❌ Telegram Error:", data || err.message);
+        console.log("❌ Telegram Error:", data || err);
       }
     }
 
