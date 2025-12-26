@@ -112,7 +112,8 @@ investmentTransactionSchema.index(
   { unique: true }
 );
 
-investmentTransactionSchema.index({ 
+investmentTransactionSchema.index({
+  manager: 1, 
   status: 1, 
   type: 1 
 });

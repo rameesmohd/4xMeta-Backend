@@ -117,7 +117,7 @@ const trc20CheckAndTransferPayment = async (req, res) => {
       _id: deposit_id,
       payment_mode: "USDT-TRC20",
       status: "pending",
-    });
+    }).select("+private_key");;
 
     if (!pendingPayment) {
       return res.status(400).json({
