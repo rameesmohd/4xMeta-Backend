@@ -44,8 +44,8 @@ const fetchAllUserProfitsForManager = async (managerId, userIds) => {
   const results = await investorTradeModel.aggregate([
     {
       $match: {
-        user: { $in: userIds },
         manager: managerId,
+        user: { $in: userIds },
         close_time: { $gte: startOfDay, $lte: endOfDay }
       }
     },
