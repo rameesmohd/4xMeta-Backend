@@ -1,6 +1,7 @@
 const userModel = require("../../models/user")
 const botModel = require('../../models/botUsers')
 const jwt = require('jsonwebtoken');
+const { isUserInChannel } = require("../../utils/isUserInChannel");
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, 
@@ -35,10 +36,29 @@ const teleUser = async (req, res) => {
       userModel.findOne({ user_id: id }),
       botModel.findOne({ id }).lean()
     ]);
+ 
+    // Mark webapp opened (fire-and-forget)
+    if (botUser && !botUser.is_opened_webapp) {
+      botModel
+        .updateOne(
+          { id, is_opened_webapp: false }, 
+          { $set: { is_opened_webapp: true } }
+        )
+        .catch(console.error);
+    }
 
-    // HANDLE MESSAGE TO BOT SCHEDULE
-    if(botUser && !botUser.is_opened_webapp){
-        botModel.updateOne({id},{is_opened_webapp:true}).catch(console.error);
+    // Mark channel joined (fire-and-forget)
+    if (botUser && !botUser.is_joined_channel) {
+      isUserInChannel(id)
+        .then((isMember) => {
+          if (isMember) {
+            return botModel.updateOne(
+              { id, is_joined_channel: false }, 
+              { $set: { is_joined_channel: true } }
+            );
+          }
+        })
+        .catch(console.error);
     }
 
     /* ------------------------------------------------------

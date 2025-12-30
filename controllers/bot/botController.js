@@ -1,11 +1,20 @@
 const OnboardingMessage = require('../../models/botMessage/OnboardingMessage');
 const BotUser = require('../../models/botUsers');
+const { isUserInChannel } = require('../../utils/isUserInChannel');
 const { sendNewBotUserAlert } = require("./botAlerts");
 
 const saveUser = async (req, res) => {
   try {
     const payload = req.body;
     const telegramId = payload.telegramId;
+
+    const update = {
+      username: payload.username,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      photo_url: payload.photo_url,
+      is_premium: payload.is_premium,
+    };
 
     const existingUser = await BotUser.findOne({ id: telegramId });
 
@@ -22,13 +31,24 @@ const saveUser = async (req, res) => {
     // Upsert botUser
     const updatedUser = await BotUser.findOneAndUpdate(
       { id: telegramId },
-      { $set: payload },
+      { $set: update },
       { upsert: true, new: true }
     );
 
+    if(!updatedUser.is_joined_channel){
+      isUserInChannel(telegramId).then(isMember => {
+        if(isMember){
+          BotUser.updateOne(
+            { id: telegramId },
+            { $set: { is_joined_channel: true } }
+          ).exec(); 
+        }
+      })
+    }
+
     // Notify only for new bot user
     if (!existingUser) {
-      await sendNewBotUserAlert(payload);
+      sendNewBotUserAlert(payload);
     }
 
     return res.status(200).json({ success: true });
