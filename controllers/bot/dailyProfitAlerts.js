@@ -105,7 +105,7 @@ Check the full breakdown here ⬇️
         inline_keyboard: [
           [
             {
-              text: hasInvested ? "📊 View Portfolio" : "Start Investing",
+              text: hasInvested ? "View Portfolio" : "Start Investing",
               web_app: { url: process.env.WEBAPP_URL }
             }
           ]
