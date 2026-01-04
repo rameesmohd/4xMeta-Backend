@@ -670,5 +670,5 @@ module.exports={
 //============Withdrawal from Investment=================
     getWithdrawSummary,
     handleInvestmentWithdrawal,
-    approveWithdrawalTransaction
+    // approveWithdrawalTransaction
 }

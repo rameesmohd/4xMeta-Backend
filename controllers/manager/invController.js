@@ -18,85 +18,6 @@ const fetchInvestmentTransactions=async(req,res)=>{
     }
 }
 
-const topUpInvestment =async(req,res)=>{
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-      const { userId, investmentId, amount } = req.body;
-
-      // Fetch user and investment
-      const user = await userModel.findById(userId).session(session);
-      const investment = await investmentModel.findById(investmentId).populate("manager").session(session);
-
-      if (!user || !investment) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ errMsg: 'Invalid user or investment!' });
-    }
-
-    // Validate balance
-    if (amount > user.my_wallets.main_wallet) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ errMsg: 'Insufficient balance. Please deposit more funds.' });
-    }
-
-    // Validate minimum top-up amount
-    if (amount < investment.min_top_up) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ errMsg: `Minimum top-up is ${investment.min_top_up} USD.` });
-    }
-      // Deduct wallet balance atomically
-      await userModel.findByIdAndUpdate(userId, {
-        $inc: { "my_wallets.main_wallet": -amount }
-    }, { session });
-
-      const userTransaction = new userTransactionModel({
-        user : user._id,
-        investment : investment._id,
-        type : 'transfer',
-        status : 'approved',
-        from : `WALL${user.my_wallets.main_wallet_id}`,
-        to : `INV${investment.inv_id}`,
-        amount : amount , 
-        transaction_type : 'investment_transactions',
-        comment : `Top-up to investment with manager ${investment.manager_nickname}.`
-      })
-      
-      const investmentTransaction = new investmentTransactionModel({
-        user : user._id,
-        investment : investment._id,
-        manager : investment.manager,
-        type : 'deposit',
-        from : `WALL${user.my_wallets.main_wallet_id}`,
-        to : `INV${investment.inv_id}`,
-        status : 'pending',
-        amount : amount , 
-        comment : `Top-up added to manager ${investment.manager_nickname}'s portfolio.`
-      })
-
-      await userTransaction.save({ session });
-      await investmentTransaction.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
-      return res.status(201).json({
-          result: investment,
-          investmentId: investment._id,
-          msg: "Deposit added successfully!"
-      });
-
-  } catch (error) {
-      console.log(error);
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(500).json({ errMsg: "Server error!", error: error.message });
-  }
-};
-
 // Helper function to calculate the date N trading days ago (only weekdays considered)
 const getDateNTradingDaysAgo=(n)=> {
   let targetDate = new Date();
@@ -110,35 +31,6 @@ const getDateNTradingDaysAgo=(n)=> {
     }
   }
   return targetDate;
-}
-
-// Function to calculate the sum of deposits in the last 30 trading days
-const getDepositsInLast30TradingDays=(investment)=> {
-  try {
-    if (!investment) {
-      throw new Error('Investment not found');
-    }
-
-    // Get the date 30 trading days ago
-    const startDate = getDateNTradingDaysAgo(investment.trading_liquidity_period);
-
-    // Filter deposits made in the last 30 trading days
-    const recentDeposits = investment.deposits.filter(deposit => 
-      new Date(deposit.deposited_at) >= startDate
-    );
-
-    // Calculate the sum of recent deposits
-    const totalRecentDeposits = recentDeposits.reduce(
-      (acc, deposit) => acc + deposit.amount, 
-      0
-    );
-
-    console.log(`Total deposits in the last trading liquidity periods: $${totalRecentDeposits}`);
-    return { totalRecentDeposits, recentDeposits };
-  } catch (error) {
-    console.error('Error fetching deposits:', error.message);
-    throw error;
-  }
 }
 
 const fetchInvestmentTrades=async(req,res)=>{
@@ -174,8 +66,6 @@ const fetchAllInvestmentTransactions=async(req,res)=>{
     return res.status(500).json({ errMsg: 'Server error!', error: error.message });
   }
 }
-
-
 
 module.exports = {
     fetchInvestmentTransactions,
