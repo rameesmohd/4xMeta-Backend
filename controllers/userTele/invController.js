@@ -390,6 +390,7 @@ const getWithdrawSummary= async(req,res)=> {
     investmentId: investment._id,
     userId: investment.user,
     totalDeposits,
+    totalWithdrawals: toTwoDecimals(investment.total_withdrawal || 0),
     depositsLocked,
     depositsUnlocked,
     lockedDepositsList: lockedDepositsArr,
