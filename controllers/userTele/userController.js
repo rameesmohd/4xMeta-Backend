@@ -219,8 +219,8 @@ const fetchAccountData = async (req, res) => {
 
     /* ----------- FETCH TRADES (WITH +1 EXTRA) ----------- */
     const trades = await InvestmentTrades.find({
+      investment: investment._id,
       ...baseQuery,
-      investment: investment._id
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -229,9 +229,9 @@ const fetchAccountData = async (req, res) => {
 
     /* ----------- FETCH ACCOUNT TRANSACTIONS (WITH +1 EXTRA) ----------- */
     const accTransactions = await InvestmentTransaction.find({
-      ...baseQuery,
       investment: investment._id,
-      user: user_id 
+      user: user_id,
+      ...baseQuery,
     })
       .sort({ createdAt: -1 })
       .skip(skip)

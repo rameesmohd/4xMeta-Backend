@@ -98,6 +98,11 @@ investmentTransactionSchema.index({
 });
 
 investmentTransactionSchema.index({
+  investment: 1,
+  createdAt: -1,
+});
+
+investmentTransactionSchema.index({
   user: 1,
   createdAt: -1,
 });
