@@ -232,7 +232,7 @@ const fetchAccountData = async (req, res) => {
       investment: investment._id,
       user: user_id,
       ...baseQuery,
-      status : 'completed'
+      status : 'success'
       })
       .sort({ createdAt: -1 })
       .skip(skip)
