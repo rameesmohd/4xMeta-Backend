@@ -69,7 +69,7 @@ const getWeeklyChart = async (req, res) => {
         };
       }
 
-      weekly[key].grow *= 1 + row.value / 100;
+      weekly[key].value = row.value;
     }
 
     const result = Object.keys(weekly).map((key) => ({
@@ -104,7 +104,7 @@ const getMonthlyChart = async (req, res) => {
 
       if (!monthly[month]) monthly[month] = 1;
 
-      monthly[month] *= 1 + row.value / 100;
+      monthly[month] = row.value;
     }
 
     const result = Object.keys(monthly).map((key) => ({
