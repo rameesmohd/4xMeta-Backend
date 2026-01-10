@@ -16,11 +16,12 @@ const getDailyChart = async (req, res) => {
       return res.status(400).json({ error: "manager_id is required" });
 
     const start = dayjs().subtract(days, "day").startOf("day").toDate();
+    const end = dayjs().endOf("day").toDate();  // ✅ Add this for consistency
 
     const data = await managerGrowthChart
       .find({
         manager: manager_id,
-        date: { $lte: new Date(), $gte: start }
+        date: { $gte: start, $lte: end }  // ✅ Consistent order
       })
       .sort({ date: 1 });
 
@@ -43,39 +44,47 @@ const getWeeklyChart = async (req, res) => {
     if (!manager_id)
       return res.status(400).json({ error: "manager_id is required" });
 
-    const start = dayjs().subtract(weeks * 7, "day").startOf("day").toDate();
+    const start = dayjs().subtract(weeks, "week").startOf("week").toDate();
+    const end = dayjs().endOf("day").toDate();
 
     const rows = await managerGrowthChart
-      .find({ manager: manager_id, date: { $gte: start } })
+      .find({ 
+        manager: manager_id, 
+        date: { $gte: start, $lte: end } 
+      })
       .sort({ date: 1 });
 
     const weekly = {};
 
     for (const row of rows) {
-      const weekNumber = dayjs(row.date).isoWeek();
-      const year = dayjs(row.date).year();
-
       const weekStart = dayjs(row.date).startOf("isoWeek");
+      const year = weekStart.year();
+      const weekNumber = weekStart.isoWeek();
+
+      // Create a consistent key using the week start date
+      const key = weekStart.format("YYYY-MM-DD");
       const weekEnd = dayjs(row.date).endOf("isoWeek");
-
       const readableLabel = `${weekStart.format("MMM D")}–${weekEnd.format("D")}`;
-
-      const key = `${year}-W${String(weekNumber).padStart(2, "0")}`;
 
       if (!weekly[key]) {
         weekly[key] = {
           grow: 1,
           label: readableLabel,
+          weekStart: weekStart.toDate(),
         };
       }
 
-      weekly[key].value = row.value;
+      // Compound the daily growth
+      weekly[key].grow *= 1 + row.value / 100;
     }
 
-    const result = Object.keys(weekly).map((key) => ({
-      week: weekly[key].label,
-      value: Number(((weekly[key].grow - 1) * 100).toFixed(2)),
-    }));
+    // Sort by week start date and calculate final percentage
+    const result = Object.keys(weekly)
+      .sort((a, b) => new Date(a) - new Date(b))
+      .map((key) => ({
+        week: weekly[key].label,
+        value: Number(((weekly[key].grow - 1) * 100).toFixed(2)),
+      }));
 
     res.json({ manager_id, weeks, data: result });
   } catch (err) {
@@ -83,7 +92,6 @@ const getWeeklyChart = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
 
 const getMonthlyChart = async (req, res) => {
   try {
@@ -93,24 +101,34 @@ const getMonthlyChart = async (req, res) => {
       return res.status(400).json({ error: "manager_id is required" });
 
     const start = dayjs().subtract(months, "month").startOf("month").toDate();
+    const end = dayjs().endOf("day").toDate();
 
     const rows = await managerGrowthChart
-      .find({ manager: manager_id, date: { $gte: start } })
+      .find({ 
+        manager: manager_id, 
+        date: { $gte: start, $lte: end } 
+      })
       .sort({ date: 1 });
 
     const monthly = {};
+    
     for (const row of rows) {
       const month = dayjs(row.date).format("YYYY-MM");
 
-      if (!monthly[month]) monthly[month] = 1;
+      if (!monthly[month]) {
+        monthly[month] = 1;
+      }
 
-      monthly[month] = row.value;
+      // Compound the daily growth
+      monthly[month] *= 1 + row.value / 100;
     }
 
-    const result = Object.keys(monthly).map((key) => ({
-      month: key,
-      value: Number(((monthly[key] - 1) * 100).toFixed(2)),
-    }));
+    const result = Object.keys(monthly)
+      .sort()
+      .map((key) => ({
+        month: key,
+        value: Number(((monthly[key] - 1) * 100).toFixed(2)),
+      }));
 
     res.json({ manager_id, months, data: result });
   } catch (err) {
