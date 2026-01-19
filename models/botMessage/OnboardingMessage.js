@@ -39,7 +39,18 @@ const onboardingMessageSchema = new mongoose.Schema(
     sentCount : { type : Number , default : 0},
     order : { type : Number ,default :0 },
     
-    command: { type: String, default: null, unique: true, sparse: true },
+    command: { 
+      type: String, 
+      default: null, 
+      unique: true, 
+      sparse: true, 
+      set: (v) => {
+        if (v === undefined) return null;
+        if (v === null) return null;
+        const s = String(v).trim();
+        return s.length ? s : null;
+      },
+    },
     inline : {type : Boolean , default : false},
     pin: { type: Boolean, default: false },
   },
