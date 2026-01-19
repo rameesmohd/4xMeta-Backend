@@ -35,7 +35,8 @@ const {
     updateOnboardMessage, 
     deleteOnboardMessage,
     reorderOnboardMessage,
-    testOnboardMessage
+    testOnboardMessage,
+    getOnboardMessageByCommand
 } = require('../controllers/master/onboardController')
 
 router.post('/login',masterLogin)

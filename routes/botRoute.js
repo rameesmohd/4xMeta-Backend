@@ -4,12 +4,21 @@ const { botAuth } = require('../middlewares/botAuth');
 const { saveUser,getOnboardMessages, updateUserJoinedChannel } = require('../controllers/bot/botController');
 const { getDailyProfitAlerts } = require('../controllers/bot/dailyProfitAlerts');
 const { getBroadcastMessages,getBroadcastUsers,markBroadcastDone } = require('../controllers/bot/broadcastController');
+const { getOnboardMessageByCommand } = require('../controllers/master/onboardController');
+
+
 
 router.use(botAuth)
+router.use((req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode === 401) {
+      console.log("🚫 401 RESPONSE:", req.method, req.originalUrl);
+    }
+  });
+  next();
+});
 
 router.post('/save-user',saveUser)
-
-router.get('/onboard/list',getOnboardMessages)
 
 router.post('/joined-channel',updateUserJoinedChannel)
 
@@ -19,5 +28,9 @@ router.get('/daily-profit-alerts',getDailyProfitAlerts)
 router.get('/broadcast/messages',getBroadcastMessages)
 router.get('/broadcast/users',getBroadcastUsers)
 router.post('/broadcast/mark-done',markBroadcastDone)
+
+//ONBOARD ROUTES
+router.get('/onboard/list',getOnboardMessages)
+router.get("/onboard/by-command", getOnboardMessageByCommand);
 
 module.exports=router

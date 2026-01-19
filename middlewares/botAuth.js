@@ -28,8 +28,9 @@ const botAuth = (req, res, next) => {
 
     const payload =
       req.method === "GET"
-        ? (req.query || {})
+        ? { ...(req.query || {}), ...(req.params || {}) }   // ✅ include params
         : (req.body || {});
+
 
     if (typeof payload !== "object") {
       return res.status(400).json({
@@ -44,6 +45,16 @@ const botAuth = (req, res, next) => {
       .createHmac("sha256", process.env.BOT_SECRET)
       .update(JSON.stringify(canonical))
       .digest("hex");
+
+    console.log("🔐 botAuth debug:", {
+        method: req.method,
+        originalUrl: req.originalUrl,
+        query: req.query,
+        params: req.params,
+        receivedSignature: signature,
+        canonical,
+        calculated,
+      });
 
     if (signature !== calculated) {
       console.error("🔐 Signature mismatch", {

@@ -1,17 +1,37 @@
 const OnboardingMessage = require("../../models/botMessage/OnboardingMessage");
 const { sendTestMessage } = require("../../utils/sendTestMessage");
 
+// ✅ helper: normalize empty command
+const normalizePayload = (body = {}) => {
+  const payload = { ...body };
+
+  if (typeof payload.command === "string") {
+    const c = payload.command.trim();
+    payload.command = c.length ? c : null;
+  }
+
+  if (payload.inline !== undefined) {
+    payload.inline = !!payload.inline;
+  }
+
+  return payload;
+};
+
 const createOnboardMessage = async (req, res) => {
   try {
     const count = await OnboardingMessage.countDocuments();
-    const payload = { ...req.body, order: count + 1 };
+    const payload = normalizePayload({ ...req.body, order: count + 1 });
 
     const msg = await OnboardingMessage.create(payload);
     res.json(msg);
   } catch (err) {
+    // ✅ if command is unique, handle duplicate key error
+    if (err?.code === 11000) {
+      return res.status(400).json({ error: "Command already exists" });
+    }
     res.status(500).json({ error: err.message });
   }
-}
+};
 
 const getOnboardMessages = async (req, res) => {
   try {
@@ -25,12 +45,22 @@ const getOnboardMessages = async (req, res) => {
 
 const updateOnboardMessage = async (req, res) => {
   try {
-    const updated = await OnboardingMessage.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const payload = normalizePayload(req.body);
+
+    const updated = await OnboardingMessage.findByIdAndUpdate(
+      req.params.id,
+      payload,
+      { new: true, runValidators: true }
+    );
+
     res.json(updated);
   } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(400).json({ error: "Command already exists" });
+    }
     res.status(500).json({ error: err.message });
   }
-}
+};
 
 // 📌 Delete onboarding message
 const deleteOnboardMessage = async (req, res) => {
@@ -89,6 +119,21 @@ const testOnboardMessage=async(req,res)=>{
    }
 }
 
+// ✅ NEW: fetch onboarding message by command (for callback buttons)
+const getOnboardMessageByCommand = async (req, res) => {
+  try {
+    const command = (req.query.command || "").trim();
+    if (!command) return res.status(400).json({ success: false, message: "Command required" });
+
+    const msg = await OnboardingMessage.findOne({ command });
+    if (!msg) return res.status(404).json({ success: false, message: "Message not found" });
+
+    return res.status(200).json({ success: true, data: msg });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 module.exports = {
     createOnboardMessage,
     reorderOnboardMessage,
@@ -96,5 +141,7 @@ module.exports = {
     deleteOnboardMessage,
     updateOnboardMessage,
     getOnboardMessages,
-    testOnboardMessage
+    testOnboardMessage,
+
+    getOnboardMessageByCommand
 }

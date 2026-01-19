@@ -9,13 +9,17 @@ const buttonSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["url", "webapp"],
+      enum: ["url", "webapp", "callback"],
       default: "url"
     },
     url: {
       type: String,
       required: true
-    }
+    },
+    command: { 
+      type: String, 
+      default: null 
+    },
   },
   { _id: false }
 );
@@ -33,7 +37,10 @@ const onboardingMessageSchema = new mongoose.Schema(
     delayMinutes: { type: Number, default : 0 }, 
     isActive: { type: Boolean, default: false },
     sentCount : { type : Number , default : 0},
-    order : { type : Number ,default :0 }
+    order : { type : Number ,default :0 },
+    
+    command: { type: String, default: null, unique: true, sparse: true },
+    inline : {type : Boolean , default : false}
   },
   { timestamps: true }
 );
