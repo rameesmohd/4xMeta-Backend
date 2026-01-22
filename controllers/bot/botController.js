@@ -17,6 +17,7 @@ const saveUser = async (req, res) => {
       is_active: true,
       inactive_reason: null,
       inactive_at: null,
+      ...(payload?.is_second_bot ? { is_second_bot: payload?.is_second_bot } : {})
     };
 
     const existingUser = await BotUser.findOne({ id: telegramId });

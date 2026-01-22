@@ -15,6 +15,7 @@ const botUserSchema = new Schema(
     inactive_reason: { type: String, default: null },
     inactive_at: { type: Date, default: null },
     
+    is_second_bot : {type : Boolean,default : false},
     // -------- Funnel & automation flags --------
     is_opened_webapp: { type: Boolean, default: false },
     is_invested: { type: Boolean, default: false },
@@ -25,6 +26,9 @@ const botUserSchema = new Schema(
 
 // Telegram user lookup
 botUserSchema.index({ id: 1 }, { unique: true });
+
+botUserSchema.index({ is_active: 1 });
+botUserSchema.index({ is_second_bot: 1 });
 
 // Funnel automation
 botUserSchema.index({ is_joined_channel: 1, is_active: 1});
