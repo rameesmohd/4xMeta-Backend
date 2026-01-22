@@ -64,16 +64,26 @@ const getBroadcastUsers = async (req, res) => {
         reply_markup: {
           inline_keyboard:
               msg.buttons?.map((btn) => [
-                btn.type === "webapp"
-                  ? {
-                      text: btn.text,
-                      web_app: { url: btn.url }
-                    }
-                  : {
-                      text: btn.text,
-                      url: btn.url
-                    }
-              ]) || []
+              // 🔹 WebApp button
+              btn.type === "webapp"
+                ? {
+                    text: btn.text,
+                    web_app: { url: btn.url },
+                  }
+
+              // 🔹 Callback button
+              : btn.type === "callback"
+                ? {
+                    text: btn.text,
+                    callback_data: btn.command || btn.data || btn.text,
+                  }
+
+              // 🔹 Normal URL button
+              : {
+                    text: btn.text,
+                    url: btn.url,
+                  }
+            ]) || []
         },
     };
     
@@ -124,8 +134,34 @@ const markBroadcastDone = async (req,res) => {
   }
 };
 
+const markInactive =  async (req, res) => {
+  try {
+    const { chat_id, reason } = req.body;
+
+    if (!chat_id) {
+      return res.status(400).json({ success: false, message: "chat_id is required" });
+    }
+
+    const updated = await BotUser.updateOne(
+      { id: Number(chat_id) },
+      {
+        $set: {
+          is_active: false,
+          inactive_reason: reason || "inactive",
+          inactive_at: new Date(),
+        },
+      }
+    );
+
+    return res.json({ success: true, updated });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err?.message || "Server error" });
+  }
+};
+
 module.exports = { 
     getBroadcastMessages,
     getBroadcastUsers,
-    markBroadcastDone
+    markBroadcastDone,
+    markInactive
 };

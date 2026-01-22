@@ -3,7 +3,7 @@ const router = express.Router();
 const { botAuth } = require('../middlewares/botAuth');
 const { saveUser,getOnboardMessages, updateUserJoinedChannel, isUserExist,getOnboardMessageByCommand } = require('../controllers/bot/botController');
 const { getDailyProfitAlerts } = require('../controllers/bot/dailyProfitAlerts');
-const { getBroadcastMessages,getBroadcastUsers,markBroadcastDone } = require('../controllers/bot/broadcastController');
+const { getBroadcastMessages,getBroadcastUsers,markBroadcastDone, markInactive } = require('../controllers/bot/broadcastController');
 
 router.use(botAuth)
 
@@ -18,6 +18,7 @@ router.get('/daily-profit-alerts',getDailyProfitAlerts)
 router.get('/broadcast/messages',getBroadcastMessages)
 router.get('/broadcast/users',getBroadcastUsers)
 router.post('/broadcast/mark-done',markBroadcastDone)
+router.post('/bot-user/mark-inactive',markInactive)
 
 //ONBOARD ROUTES
 router.get('/onboard/list',getOnboardMessages)

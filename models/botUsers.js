@@ -3,7 +3,6 @@ const { Schema } = mongoose;
 
 const botUserSchema = new Schema(
   {
-    is_active: { type : Boolean,default : true },
     id: { type: Number, required: true },
     username: { type: String, default: null },
     first_name: { type: String, default: null },
@@ -11,6 +10,11 @@ const botUserSchema = new Schema(
     photo_url: { type: String, default: null },
     is_premium: { type: Boolean, default: false },
     referred_by: { type: String, default: null },
+
+    is_active: { type : Boolean,default : true },
+    inactive_reason: { type: String, default: null },
+    inactive_at: { type: Date, default: null },
+    
     // -------- Funnel & automation flags --------
     is_opened_webapp: { type: Boolean, default: false },
     is_invested: { type: Boolean, default: false },
