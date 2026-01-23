@@ -159,9 +159,33 @@ const markInactive =  async (req, res) => {
   }
 };
 
+const markSecondInactive =  async (req, res) => {
+  try {
+    const { chat_id } = req.body;
+
+    if (!chat_id) {
+      return res.status(400).json({ success: false, message: "chat_id is required" });
+    }
+
+    const updated = await BotUser.updateOne(
+      { id: Number(chat_id) },
+      {
+        $set: {
+          is_second_bot : false
+        },
+      }
+    );
+
+    return res.json({ success: true, updated });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err?.message || "Server error" });
+  }
+};
+
 module.exports = { 
     getBroadcastMessages,
     getBroadcastUsers,
     markBroadcastDone,
-    markInactive
+    markInactive,
+    markSecondInactive
 };

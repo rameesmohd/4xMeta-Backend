@@ -129,17 +129,17 @@ const getDailyProfitAlerts = async (req, res) => {
       return res.json({ success: true, alerts: [] });
     }
 
-    const webAppUsers = await userModel
-      .find({ login_type: "telegram" }, { telegram: 1 })
-      .lean();
+    // const webAppUsers = await userModel
+    //   .find({ login_type: "telegram" }, { telegram: 1 })
+    //   .lean();
 
-    const nonWebAppUsers = await botUserModel
-      .find({ is_opened_webapp: false, is_invested: false })
+    const botUsers = await botUserModel
+      .find({ is_second_bot : true })
       .lean();
 
     const allUsers = [
-      ...webAppUsers.map(u => ({ chat_id: Number(u.telegram.id), userId: u._id })),
-      ...nonWebAppUsers.map(u => ({ chat_id: Number(u.id), userId: null }))
+      // ...webAppUsers.map(u => ({ chat_id: Number(u.telegram.id), userId: u._id })),
+      ...botUsers.map(u => ({ chat_id: Number(u.id), userId: null }))
     ];
 
     const pageUsers = allUsers.slice(offset, offset + limit);
