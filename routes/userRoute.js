@@ -7,6 +7,7 @@ const payment = require('../controllers/userTele/paymentController');
 const investment = require('../controllers/userTele/invController');
 const manager = require('../controllers/manager/managerController')
 const chart = require('../controllers/chartController');
+const bonus = require('../controllers/userTele/bonusController')
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const upload = require('../config/multer');
 const { default: rateLimit } = require('express-rate-limit');
@@ -37,6 +38,13 @@ router.route('/deposit/usdt-trc20')
 router.route('/deposit/usdt-bep20')
       .get(payment.bep20CreateDeposit) 
       .post(payment.bep20CheckAndTransferPayment)
+
+router.route('/bonuses/claim')
+      .get(bonus.fetchBonus) 
+      .post(investment.makeBonusInvestment)
+
+router.route("/bonus/check-criteria")
+      .get(bonus.checkCriteria)
 
 router.post('/withdraw/crypto',payment.withdrawFromMainWallet)
 

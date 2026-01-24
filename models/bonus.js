@@ -9,6 +9,18 @@ const BonusSchema = new Schema(
       index: true,
     },
 
+    name : {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    desc: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     type: {
       type: String,
       enum: ["claim", "coupon"],
@@ -47,12 +59,6 @@ const BonusSchema = new Schema(
       type: Number,
       default: 0,
       min: 0,
-    },
-
-    comment: {
-      type: String,
-      default: "",
-      trim: true,
     },
 
     expire_on: {

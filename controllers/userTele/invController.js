@@ -184,11 +184,12 @@ const makeBonusInvestment = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const { managerId, ref ,bonus } = req.body;
+      const { manager:managerId, ref ,bonus } = req.body;
       const parsed = Number(bonus.amount);
       const amount = Math.floor(parsed * 100) / 100;
       const userId = req.user._id;
-
+      
+      console.log("Bonus Investment Request:", { userId, managerId, amount, bonus });
       if (!userId || !managerId || !amount || !bonus || amount <= 0) {
         throw new Error("Invalid input data");
       }
@@ -297,13 +298,13 @@ const makeBonusInvestment = async (req, res) => {
       );
 
       // Increase manager investor count
-      ManagerModel.findByIdAndUpdate(
+      await ManagerModel.findByIdAndUpdate(
         managerId,
         { $inc: { total_investors: 1 } },
         { session }
       );
 
-      BonusModel.findByIdAndUpdate(
+      await BonusModel.findByIdAndUpdate(
         bonus._id,
         { $inc: { used_count: 1 } },
         { session }
@@ -421,6 +422,7 @@ const getWithdrawSummary= async(req,res)=> {
 
   // Helper: is a single deposit locked?
   const isDepositLocked = (deposit) => {
+    if (deposit?.kind === "bonus") return true;
     // If deposit has explicit unlocked_at, use it
     if (deposit.unlocked_at) {
       const unlockedAt = new Date(deposit.unlocked_at);
@@ -824,5 +826,6 @@ module.exports={
     getWithdrawSummary,
     handleInvestmentWithdrawal,
     // approveWithdrawalTransaction,
-    makeBonusInvestment
+
+    makeBonusInvestment,
 }

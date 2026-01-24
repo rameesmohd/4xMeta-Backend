@@ -16,9 +16,10 @@ const isUserInChannel = async (userId) => {
     if (err?.response?.status === 429) {
       console.log("Rate limit hit, retry later:", err.response.data);
     } else {
-      console.log("API Error:", err.message);
+      console.log("API Error:", err?.message);
+      console.log("User err status =>`,", e?.response?.data?.description || e?.message);
     }
-    return false; // treat as not joined
+    return false; 
   }
 };
 

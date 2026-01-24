@@ -19,7 +19,7 @@ const parseNullableInt = (v) => {
 
 /**
  * POST /bonus
- * body: { manager, type, status?, amount, comment?, expire_on?, code?, max_uses? }
+ * body: { manager, type, status?, amount, NAME?, expire_on?, code?, max_uses? }
  */
 const createBonus = async (req, res) => {
   try {
@@ -28,7 +28,8 @@ const createBonus = async (req, res) => {
       type,
       status = "active",
       amount,
-      comment = "",
+      desc = "",
+      name = "",
       expire_on = null,
       code = null,
       max_uses = null,
@@ -71,7 +72,8 @@ const createBonus = async (req, res) => {
       type,
       status,
       amount: Math.floor(amt * 100) / 100,
-      comment,
+      desc,
+      name,
       expire_on: expireDate,
       code: code ? String(code).trim() : null,
       max_uses: maxUses,
@@ -105,7 +107,8 @@ const updateBonus = async (req, res) => {
       type,
       status,
       amount,
-      comment,
+      desc,
+      name,
       expire_on,
       code,
       max_uses,
@@ -132,7 +135,8 @@ const updateBonus = async (req, res) => {
       update.amount = Math.floor(amt * 100) / 100;
     }
 
-    if (comment !== undefined) update.comment = String(comment || "");
+    if (name !== undefined) update.name = String(name || "");
+    if (desc !== undefined) update.desc = String(desc || "");
 
     if (expire_on !== undefined) {
       const expireDate = parseNullableDate(expire_on);
@@ -207,7 +211,7 @@ const getBonusById = async (req, res) => {
 /**
  * GET /bonus
  * query: manager?, type?, status?, search?, page?, limit?, activeNow?
- * - search matches code/comment
+ * - search matches code/NAME
  * - activeNow=true returns active + not expired
  */
 const listBonuses = async (req, res) => {
@@ -244,7 +248,7 @@ const listBonuses = async (req, res) => {
     const s = String(search).trim();
     if (s) {
       filter.$or = [
-        { comment: { $regex: s, $options: "i" } },
+        { name: { $regex: s, $options: "i" } },
         { code: { $regex: s, $options: "i" } },
       ];
     }

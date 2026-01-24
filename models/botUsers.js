@@ -10,7 +10,7 @@ const botUserSchema = new Schema(
     photo_url: { type: String, default: null },
     is_premium: { type: Boolean, default: false },
     referred_by: { type: String, default: null },
-
+    
     is_active: { type : Boolean,default : true },
     inactive_reason: { type: String, default: null },
     inactive_at: { type: Date, default: null },
