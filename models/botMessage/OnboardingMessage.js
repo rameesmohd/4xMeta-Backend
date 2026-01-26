@@ -26,7 +26,7 @@ const buttonSchema = new mongoose.Schema(
 
 const onboardingMessageSchema = new mongoose.Schema(
   {
-    name: {type: String},
+    title: {type: String},
     type: { type: String, enum: ["text", "audio", "video", "image"], required: true },
     caption: { type: String },
     fileId: { type: String },
