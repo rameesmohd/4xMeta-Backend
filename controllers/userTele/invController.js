@@ -624,6 +624,9 @@ const handleInvestmentWithdrawal = async (req, res) => {
     if (!amount || amount <= 0)
       return res.status(400).json({ success : false, errMsg: "Invalid withdrawal amount." });
 
+    if (amount < 10)
+      return res.status(400).json({ success : false, errMsg: "Min withdrawal is 10USD." });
+
     const investment = await investmentModel.findById(investmentId);
     if (!investment)
       return res.status(400).json({ success : false, errMsg: "Investment not found." });
