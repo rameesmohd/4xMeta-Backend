@@ -33,5 +33,6 @@ botUserSchema.index({ is_active: 1, is_joined_channel: 1 });
 botUserSchema.index({ is_active: 1, is_invested: 1, is_claimed_bonus: 1 });
 
 botUserSchema.index({ referred_by: 1 });
+botUserSchema.index({ is_second_bot: 1 });
 
 module.exports = mongoose.model("bot_users", botUserSchema);

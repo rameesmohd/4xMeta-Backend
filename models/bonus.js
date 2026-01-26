@@ -45,8 +45,6 @@ const BonusSchema = new Schema(
       type: String,
       default: null,
       trim: true,
-      index: true,
-      sparse: true,
     },
 
     max_uses: {
