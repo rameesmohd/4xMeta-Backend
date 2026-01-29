@@ -41,6 +41,11 @@ const fetchManagerProfitToday = async (managerId) => {
 };
 
 const fetchAllUserProfitsForManager = async (managerId, userIds) => {
+  // 🔴 FIX 3: Short-circuit if no user IDs
+  if (!userIds || userIds.length === 0) {
+    return new Map();
+  }
+
   const { startOfDay, endOfDay } = getTodayRange();
 
   const results = await investorTradeModel.aggregate([
@@ -81,7 +86,7 @@ const buildAlertMessage = ({
 <b>Today’s Performance:</b> $${managerProfit.toFixed(2)}
 <b>Your Portfolio:</b> ${userProfit > 0 ? "+" : ""}$${userProfit.toFixed(2)}</blockquote>
 
-${hasInvested ? userProfit > 0 ? "<b>Positive progress today.</b>" : userProfit < 0 ? "<b>Controlled drawdown within risk limits.</b>":"<b>No trades executed today.</b>": 
+${hasInvested ? userProfit > 0 ? "<b>Positive progress today.</b>" : userProfit < 0 ? "<b>Controlled drawdown within risk limits.</b>" : "<b>No trades executed today.</b>" : 
 `<b>The best part?</b>
 Our followers earned this while sleeping, working, or spending time with family.
 `}
@@ -116,48 +121,107 @@ const getDailyProfitAlerts = async (req, res) => {
     
     const alerts = [];
 
+    // Fetch all managers
     const managers = await managerModel.find().lean();
     if (!managers.length) {
       return res.json({ success: true, alerts: [] });
     }
 
-    // const webAppUsers = await userModel
-    //   .find({ login_type: "telegram" }, { telegram: 1 })
-    //   .lean();
-
+    // Get bot users (who will receive the alerts)
     const botUsers = await botUserModel
-      .find({ is_second_bot : true })
+      .find({ is_second_bot: true })
       .lean();
 
-    const allUsers = [
-      // ...webAppUsers.map(u => ({ chat_id: Number(u.telegram.id), userId: u._id })),
-      ...botUsers.map(u => ({ chat_id: Number(u.id), userId: null }))
-    ];
+    if (!botUsers.length) {
+      return res.json({ success: true, alerts: [] });
+    }
 
-    const pageUsers = allUsers.slice(offset, offset + limit);
+    // Paginate bot users
+    const pageBotUsers = botUsers.slice(offset, offset + limit);
 
+    // Extract telegram IDs from bot users
+    const telegramIds = pageBotUsers.map(u => u.id);
+
+    // 🔴 FIX 1: Guard against empty telegram IDs
+    if (!telegramIds || telegramIds.length === 0) {
+      return res.json({ success: true, offset, limit, count: 0, alerts: [] });
+    }
+
+    // Find web app users with matching telegram IDs
+    const webAppUsers = await userModel
+      .find({ 
+        login_type: "telegram",
+        "telegram.id": { $in: telegramIds }
+      })
+      .select("_id telegram")
+      .lean();
+
+    // Create a map: telegramId -> webAppUserId
+    const telegramToUserIdMap = new Map();
+    webAppUsers.forEach(user => {
+      if (user.telegram?.id) {
+        telegramToUserIdMap.set(user.telegram.id.toString(), user._id);
+      }
+    });
+
+    // Get all unique web app user IDs
+    const allWebAppUserIds = Array.from(telegramToUserIdMap.values());
+
+    // 🔴 FIX 1: If no web app users linked, still send alerts but with zero profit
+    const hasLinkedUsers = allWebAppUserIds.length > 0;
+
+    // Process each manager
     for (const manager of managers) {
+      // 🔴 FIX 2: Fetch manager profit first and skip if zero
       const managerProfit = await fetchManagerProfitToday(manager._id);
-      // if (managerProfit <= 0) continue;
+      
+      // Skip managers with no activity today (performance optimization)
+      if (managerProfit === 0) {
+        continue;
+      }
 
-      const webUserIds = pageUsers.filter(u => u.userId).map(u => u.userId);
-      const profitMap = await fetchAllUserProfitsForManager(manager._id, webUserIds);
+      let profitMap = new Map();
+      let investedUserIds = new Set();
 
-      const investments = await investmentModel.find(
-        { user: { $in: webUserIds }, manager: manager._id },
-        { user: 1 }
-      ).lean();
+      // Only fetch user data if there are linked web app users
+      if (hasLinkedUsers) {
+        // Fetch profit data for all web app users under this manager
+        profitMap = await fetchAllUserProfitsForManager(manager._id, allWebAppUserIds);
 
-      const investedSet = new Set(investments.map(i => i.user.toString()));
+        // Fetch investments for these users under this manager
+        const investments = await investmentModel.find(
+          { 
+            user: { $in: allWebAppUserIds }, 
+            manager: manager._id 
+          },
+          { user: 1 }
+        ).lean();
 
-      for (const u of pageUsers) {
+        investedUserIds = new Set(investments.map(i => i.user.toString()));
+      }
+
+      // Build alerts for each bot user
+      for (const botUser of pageBotUsers) {
+        const telegramId = botUser.id.toString();
+        const webAppUserId = telegramToUserIdMap.get(telegramId);
+
+        let userProfit = 0;
+        let hasInvested = false;
+
+        // Only assign profit/investment if user is linked
+        if (webAppUserId) {
+          const webAppUserIdStr = webAppUserId.toString();
+          userProfit = profitMap.get(webAppUserIdStr) || 0;
+          hasInvested = investedUserIds.has(webAppUserIdStr);
+        }
+
         alerts.push(
           buildAlertMessage({
-            chat_id: u.chat_id,
+            chat_id: Number(botUser.id),
             manager,
             managerProfit,
-            userProfit: u.userId ? profitMap.get(u.userId.toString()) || 0 : 0,
-            hasInvested: u.userId ? investedSet.has(u.userId.toString()) : false
+            userProfit,
+            hasInvested
           })
         );
       }
@@ -172,7 +236,7 @@ const getDailyProfitAlerts = async (req, res) => {
     });
   } catch (error) {
     console.error("Daily alert controller error:", error);
-    return res.status(500).json({ success: false });
+    return res.status(500).json({ success: false, error: error.message });
   }
 };
 
