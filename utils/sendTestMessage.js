@@ -13,14 +13,40 @@ const sendTestMessage = async (msg) => {
     // ✅ Convert HTML to Telegram format
     const telegramCaption = msg.caption ? convertToTelegramHtml(msg.caption) : "";
 
+    const inlineKeyboard = msg.buttons?.map(btn => {
+      if (btn.type === "url") {
+        if (!/^https?:\/\//i.test(btn.url)) {
+          throw new Error(`Invalid URL button: ${btn.text}`);
+        }
+        return [{ text: btn.text, url: btn.url }];
+      }
+
+      if (btn.type === "webapp") {
+        if (!/^https?:\/\//i.test(btn.url)) {
+          throw new Error(`Invalid WebApp URL: ${btn.text}`);
+        }
+        return [{
+          text: btn.text,
+          web_app: { url: btn.url }
+        }];
+      }
+
+      if (btn.type === "callback") {
+        return [{
+          text: btn.text,
+          callback_data: btn.command || btn.text
+        }];
+      }
+
+      return null;
+    }).filter(Boolean);
+
+
     const payload = {
       chat_id: channelId,
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard:
-          msg.buttons
-            ?.filter(btn => btn.text && btn.url)
-            .map(btn => [{ text: btn.text, url: btn.url }]) || []
+        inline_keyboard:inlineKeyboard || []
       }
     };
 
