@@ -176,9 +176,9 @@ const getDailyProfitAlerts = async (req, res) => {
       const managerProfit = await fetchManagerProfitToday(manager._id);
       
       // Skip managers with no activity today (performance optimization)
-      if (managerProfit === 0) {
-        continue;
-      }
+      // if (managerProfit === 0) {
+      //   continue;
+      // }
 
       let profitMap = new Map();
       let investedUserIds = new Set();
