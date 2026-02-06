@@ -639,9 +639,10 @@ const handleInvestmentWithdrawal = async (req, res) => {
     if(user?.login_type === "telegram"){
       const botUser = await BotUserModel.findOne({ id: user.telegram?.id });
       if(!botUser.is_invested){
-        errMsg: "Bonus profits can only be withdrawn after a minimum actual investment."
+         return res.status(400).json({errMsg: "Bonus profits can only be withdrawn after a minimum actual investment."});
       }
     }
+    
     /** -----------------------------------------
      * Calculate liquidity-locked deposits
      * ----------------------------------------- */
