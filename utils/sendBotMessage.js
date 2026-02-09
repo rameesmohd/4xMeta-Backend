@@ -31,7 +31,7 @@ const processQueue = async () => {
       }
     }
 
-    await delay(100);
+    await delay(500);
   }
 
   isProcessing = false;
