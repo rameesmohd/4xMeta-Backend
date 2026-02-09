@@ -1,5 +1,5 @@
 const axios = require("axios");
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = process.env.ALERT_BOT_TOKEN;
 const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 let queue = [];
