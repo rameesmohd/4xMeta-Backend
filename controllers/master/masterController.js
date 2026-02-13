@@ -135,6 +135,7 @@ const fetchBotUsersStats=async(req,res)=>{
           opened: { $sum: { $cond: ["$is_opened_webapp", 1, 0] } },
           invested: { $sum: { $cond: ["$is_invested", 1, 0] } },
           second : { $sum: { $cond: ["$is_second_bot", 1, 0] } },
+          claimed : { $sum: { $cond: ["$is_claimed_bonus", 1, 0] } },
         },
       },
       { $project: { _id: 0 } },
