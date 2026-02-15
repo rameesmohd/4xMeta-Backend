@@ -19,7 +19,7 @@ const {
         fetchBotUsers,
         fetchBotUsersStats
     } =require('../controllers/master/masterController')
-const { fetchAddressBalance } = require('../controllers/userTele/paymentController')
+const { fetchAddressBalance } = require('../controllers/user/paymentController')
 const {verifyToken} = require('../middlewares/masterAuth')
 const { 
     createScheduledMessage,
