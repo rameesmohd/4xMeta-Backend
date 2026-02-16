@@ -1,11 +1,12 @@
 const express = require('express')
 const router = express.Router();
 const { verifyUser } = require('../middlewares/userAuth')
-const auth = require('../controllers/user/authController');
+const teleAuth = require('../controllers/user/authController');
+const webAuth = require('../controllers/user/web/auth');
 const user = require('../controllers/user/userController');
 const payment = require('../controllers/user/paymentController');
 const investment = require('../controllers/user/invController');
-const manager = require('../controllers/manager/managerController')
+const manager = require('../controllers/user/managerController')
 const chart = require('../controllers/chartController');
 const bonus = require('../controllers/user/bonusController')
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
@@ -16,16 +17,21 @@ router.get("/ping",(req,res)=>{
       res.status(200).json({ok : true})
 })
 
-// router.post('/test',auth.userlog)
+// router.post('/test',teleAuth.userlog)
 
 const strictLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 20,
 });
 
-router.post('/user',strictLimiter,auth.teleUser)
-
+//-----------------------------------WEB PUBLIC---------------------------------------------->
+router.post('/register',strictLimiter,webAuth.registerWebUser)
+router.post('/login',strictLimiter,webAuth.webLogin)
 router.get('/list-countries',strictLimiter,fetchCountryList)
+
+//------------------------------------TELE PUBLIC--------------------------------------------->
+router.post('/user',strictLimiter,teleAuth.teleUser)
+// -------------------------------------------------------------------------------->
 
 router.use(verifyUser)
 
@@ -64,7 +70,7 @@ router.route('/withdraw/investment')
 
 router.post('/portfolio/history',investment.fetchInvTransactions)
 
-router.get('/manager-portfolio',manager.fetchManager)
+router.get('/manager-portfolio',manager.fetchManagerTele)
 router.get("/account-history/manager",manager.fetchAccountData)
 router.get('/transactions/manager',manager.fetchManagerTransactions)
 
@@ -80,5 +86,8 @@ router.post('/kyc/residential',upload.array("residentialProof", 2),user.handleKy
 router.route("/rebate")
       .get(user.fetchRebateTx)
       .post(user.trasferRebateToWallet)
+
+router.get('/user/manager',manager.fetchManager)
+router.get('/investments',investment.fetchInvestments)
 
 module.exports=router

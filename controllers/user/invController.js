@@ -730,114 +730,36 @@ const handleInvestmentWithdrawal = async (req, res) => {
   }
 };
 
-const approveWithdrawalTransaction = async (withdrawTransactionId, rollover_id) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+const fetchInvestments=async(req,res)=>{
   try {
-    const withdrawTx = await InvestmentTransaction.findById(withdrawTransactionId)
-      .session(session);
+    const user = req.user;
+    const userId = req.user._id
+    const investment = await investmentModel.find({
+      user:userId,
+    })
 
-    if (!withdrawTx) {
-      console.log("Withdrawal Transaction not found");
-      await session.abortTransaction();
-      return false;
-    }
-
-    const userData = await UserModel.findById(withdrawTx.user).session(session);
-    if (!userData) {
-      console.log("User not found");
-      await session.abortTransaction();
-      return false;
-    }
-
-    const investment = await investmentModel.findById(withdrawTx.investment)
-      .session(session);
-    if (!investment) {
-      console.log("Investment not found");
-      await session.abortTransaction();
-      return false;
-    }
-
-    const amount = Number(withdrawTx.amount);
-    const performanceFee = Number(withdrawTx.deduction || 0);
-    const isDeducted = withdrawTx.is_deducted;
-
-    let finalAmount = amount;
-
-    /** -----------------------------------------
-     * Deduct Manager Performance Fee
-     * ----------------------------------------- */
-    if (performanceFee > 0 && !isDeducted) {
-      finalAmount -= performanceFee;
-
-      const feeTx = new InvestmentTransaction({
-        user: userData._id,
-        investment: investment._id,
-        manager: investment.manager,
-        type: "manager_fee",
-        status: "success",
-        amount: performanceFee,
-        rollover_id: rollover_id,
-        comment: `Perf fee ${performanceFee} deducted`,
-      });
-
-      await feeTx.save({ session });
-    }
-
-    /** -----------------------------------------
-     * Add Funds to User Wallet
-     * ----------------------------------------- */
-    userData.wallets.main += finalAmount;
-
-    const manager = await ManagerModel.find({_id : investment.manager})
-    /** -----------------------------------------
-     * Create User Transaction Record
-     * ----------------------------------------- */
-    const userTransaction = new UserTransaction({
-      user: userData._id,
-      investment: investment._id,
-      type: "transfer",
-      status: "completed",
-      from: `INV_${investment.inv_id}`,
-      to: `WALL_${userData.wallets.main_id}`,
-      amount: finalAmount,
-      transaction_id: withdrawTx.transaction_id,
-      related_transaction: withdrawTx._id,
-      description: `From Manager: ${manager.nickname}`,
+    return res.status(200).json({
+      status : "success",
+      result: {
+        investment,
+        user
+      },
     });
-
-    /** -----------------------------------------
-     * Mark Withdrawal Transaction As Success
-     * ----------------------------------------- */
-    withdrawTx.status = "success";
-
-    /** -----------------------------------------
-     * Save All in Single Atomic Transaction
-     * ----------------------------------------- */
-    await Promise.all([
-      withdrawTx.save({ session }),
-      userData.save({ session }),
-      userTransaction.save({ session })
-    ]);
-
-    await session.commitTransaction();
-    session.endSession();
-
-    console.log("Withdrawal processed successfully.");
-    return true;
-  } catch (err) {
-    console.error("Transaction error:", err);
-    await session.abortTransaction();
-    session.endSession();
-    return false;
+  } catch (error) {
+    console.error("Investment Error:", error);
+    return res.status(500).json({
+      errMsg: error.message || "Server error",
+    });
   }
-};
+}
+
 
 module.exports={
     makeInvestment,
     fetchInvestment,
     fetchInvTransactions,
+
+    fetchInvestments,
 
 //============Withdrawal from Investment=================
     getWithdrawSummary,
