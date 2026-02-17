@@ -22,5 +22,4 @@ const connectDB = require('./config/mongoose.js');
   } catch (err) {
     console.error("❌ Error loading cron jobs:", err);
   }
-
 })();

@@ -90,4 +90,9 @@ router.route("/rebate")
 router.get('/user/manager',manager.fetchManager)
 router.get('/investments',investment.fetchInvestments)
 
+router.get('/investment/trades',investment.fetchInvestmentTrades)
+router.get('/investment/transactions',investment.fetchInvestmentTransactions)
+router.get('/investment',investment.fetchInvById)
+
+
 module.exports=router

@@ -3,6 +3,7 @@ const ManagerModel = require('../../models/manager');
 const UserModel = require('../../models/user')
 const { default: mongoose } = require('mongoose');
 const InvestmentTransaction = require('../../models/investmentTx');
+const InvestmentTrades = require('../../models/investmentTrades');
 const UserTransaction = require('../../models/userTx');
 const BotUserModel = require('../../models/botUsers')
 const BonusModel = require('../../models/bonus');
@@ -753,6 +754,52 @@ const fetchInvestments=async(req,res)=>{
   }
 }
 
+const fetchInvestmentTrades=async(req,res)=>{
+  try {
+    const {_id} = req.query
+    const myInvestmetTrades =  await InvestmentTrades.find({investment:_id})
+    return res.status(200).json({result : myInvestmetTrades})
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ errMsg: 'Server error!', error: error.message });
+  }
+}
+
+const fetchInvestmentTransactions=async(req,res)=>{
+  try {
+    const {_id} = req.query
+    const myInvestmetTrades =  await InvestmentTransaction.find({investment:_id})
+    return res.status(200).json({result : myInvestmetTrades})
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ errMsg: 'Server error!', error: error.message });
+  }
+}
+
+const fetchInvById=async(req,res)=>{
+  try {
+    const user = req.user
+    const userId = req.user._id
+    const invId = req.query.id
+    const investment = await investmentModel.findOne({
+      _id : invId,
+      user:userId,
+    }).populate('manager')
+
+    return res.status(200).json({
+      status : "success",
+      result: {
+        investment,
+        user
+      },
+    });
+  } catch (error) {
+    console.error("Investment Error:", error);
+    return res.status(500).json({
+      errMsg: error.message || "Server error",
+    });
+  }
+}
 
 module.exports={
     makeInvestment,
@@ -761,10 +808,12 @@ module.exports={
 
     fetchInvestments,
 
-//============Withdrawal from Investment=================
+    //<===== Withdrawal from Investment ======>
     getWithdrawSummary,
     handleInvestmentWithdrawal,
-    // approveWithdrawalTransaction,
 
     makeBonusInvestment,
+    fetchInvestmentTrades,
+    fetchInvestmentTransactions,
+    fetchInvById
 }
