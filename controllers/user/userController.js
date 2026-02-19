@@ -534,7 +534,7 @@ const trasferRebateToWallet = async (req, res) => {
       { session }
     );
 
-     await RebateTransactionModel.create(
+    await RebateTransactionModel.create(
       [
         {
           user: user._id,
@@ -565,6 +565,20 @@ const trasferRebateToWallet = async (req, res) => {
   }
 };
 
+const fetchUser =async(req,res)=>{
+    try {
+        const { _id }=req.user 
+        const user = await UserModel.findOne({_id},{password : 0,currToken : 0})
+        if(!user){
+            return res.status(400).json({errMsg:'User not found!'})
+        }
+        return res.status(200).json({result :user })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ errMsg: 'Error registering user', error: error.message });
+    }
+}
+
 module.exports = {
     fetchUserWallet,
     fetchUserWalletTransactions,
@@ -576,4 +590,6 @@ module.exports = {
 
     fetchRebateTx,
     trasferRebateToWallet,
+
+    fetchUser
 }

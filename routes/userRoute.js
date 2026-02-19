@@ -9,6 +9,7 @@ const investment = require('../controllers/user/invController');
 const manager = require('../controllers/user/managerController')
 const chart = require('../controllers/chartController');
 const bonus = require('../controllers/user/bonusController')
+const ticket = require('../controllers/user/ticketContoller')
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const upload = require('../config/multer');
 const { default: rateLimit } = require('express-rate-limit');
@@ -94,5 +95,11 @@ router.get('/investment/trades',investment.fetchInvestmentTrades)
 router.get('/investment/transactions',investment.fetchInvestmentTransactions)
 router.get('/investment',investment.fetchInvById)
 
+router.route('/ticket')
+.post(upload.array('upload',5),ticket.submitTicket)
+.get(ticket.fetchTickets)
+
+router.get('/user',user.fetchUser)
+router.post('/logout',webAuth.webLogout)
 
 module.exports=router

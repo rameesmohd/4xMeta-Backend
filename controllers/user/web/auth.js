@@ -234,9 +234,41 @@ const webLogin = async (req, res) => {
   }
 };
 
+const webLogout = async (req, res) => {
+  try {
+    const { user } = req;
+    if (!user) {
+      return res.status(400).json({ success: false, errMsg: "User not authenticated" });
+    }
+
+    await userModel.updateOne(
+      { _id: user._id },
+      { $unset: { currToken: 1 } }
+    );
+
+    return res
+      .clearCookie("userToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        ...(process.env.NODE_ENV === "production" && { domain: process.env.DOMAIN }),
+      })
+      .status(200)
+      .json({ success: true, message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Web logout error:", error);
+    return res.status(500).json({
+      success: false,
+      errMsg: "Server error!",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
    registerWebUser,
-   webLogin
+   webLogin,
+   webLogout
 }
 
 
