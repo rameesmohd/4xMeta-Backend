@@ -579,6 +579,36 @@ const fetchUser =async(req,res)=>{
     }
 }
 
+const callbackRequestSubmit = async (req, res) => {
+    try {
+        const { client, name, surname, contactnumber, emailaddress, agreement } = req.body;
+
+        // Validate input
+        if (!name || !surname || !contactnumber || !emailaddress) {
+            return res.status(400).json({ errMsg: "Please fill in all required fields." });
+        }
+
+        await resend.emails.send({
+            from: process.env.WEBSITE_MAIL,
+            to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com", 
+            subject: "New Contact Form Submission",
+            html: `
+                <h3 style="color: #333;">New Contact Form Submission</h3>
+                <p><strong>Existing Client:</strong> ${client ? "Yes" : "No"}</p>
+                <p><strong>Name:</strong> ${name} ${surname}</p>
+                <p><strong>Contact Number:</strong> ${contactnumber}</p>
+                <p><strong>Email Address:</strong> ${emailaddress}</p>
+                <p><strong>Agreement:</strong> ${agreement ? "Agreed" : "Not Agreed"}</p>
+            `,
+        });
+
+        return res.status(200).json({ msg: "Your request has been successfully submitted. We will get back to you shortly." });
+    } catch (error) {
+        console.error("Error sending callback email:", error);
+        return res.status(500).json({ errMsg: "There was an issue submitting your request. Please try again later." });
+    }
+};
+
 module.exports = {
     fetchUserWallet,
     fetchUserWalletTransactions,
@@ -591,5 +621,6 @@ module.exports = {
     fetchRebateTx,
     trasferRebateToWallet,
 
-    fetchUser
+    fetchUser,
+    callbackRequestSubmit
 }

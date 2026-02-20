@@ -29,6 +29,7 @@ const strictLimiter = rateLimit({
 router.post('/register',strictLimiter,webAuth.registerWebUser)
 router.post('/login',strictLimiter,webAuth.webLogin)
 router.get('/list-countries',strictLimiter,fetchCountryList)
+router.post('/callback-request',user.callbackRequestSubmit)
 
 //------------------------------------TELE PUBLIC--------------------------------------------->
 router.post('/user',strictLimiter,teleAuth.teleUser)
