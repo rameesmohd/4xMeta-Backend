@@ -754,27 +754,67 @@ const fetchInvestments=async(req,res)=>{
   }
 }
 
-const fetchInvestmentTrades=async(req,res)=>{
+const fetchInvestmentTrades = async (req, res) => {
   try {
-    const {_id} = req.query
-    const myInvestmetTrades =  await InvestmentTrades.find({investment:_id})
-    return res.status(200).json({result : myInvestmetTrades})
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ errMsg: 'Server error!', error: error.message });
-  }
-}
+    const { _id, page = 1, limit = 10 } = req.query;
 
-const fetchInvestmentTransactions=async(req,res)=>{
-  try {
-    const {_id} = req.query
-    const myInvestmetTrades =  await InvestmentTransaction.find({investment:_id})
-    return res.status(200).json({result : myInvestmetTrades})
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [rows, total] = await Promise.all([
+      InvestmentTrades.find({ investment: _id })
+        .sort({ createdAt: -1 }) // latest first (better than reverse on frontend)
+        .skip(skip)
+        .limit(limitNum),
+      InvestmentTrades.countDocuments({ investment: _id }),
+    ]);
+
+    return res.status(200).json({
+      result: rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        hasMore: pageNum * limitNum < total,
+      },
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ errMsg: 'Server error!', error: error.message });
+    return res.status(500).json({ errMsg: "Server error!", error: error.message });
   }
-}
+};
+
+const fetchInvestmentTransactions = async (req, res) => {
+  try {
+    const { _id, page = 1, limit = 10 } = req.query;
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [rows, total] = await Promise.all([
+      InvestmentTransaction.find({ investment: _id })
+        .sort({ updatedAt: -1 }) // ✅ newest first
+        .skip(skip)
+        .limit(limitNum),
+      InvestmentTransaction.countDocuments({ investment: _id }),
+    ]);
+
+    return res.status(200).json({
+      result: rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        hasMore: pageNum * limitNum < total,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ errMsg: "Server error!", error: error.message });
+  }
+};
 
 const fetchInvById=async(req,res)=>{
   try {
