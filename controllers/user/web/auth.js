@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const userModel = require("../../../models/user.js");
 const { validateRegister,validateLogin } = require("../../common/validations.js");
 const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, 
@@ -236,15 +237,19 @@ const webLogin = async (req, res) => {
 
 const webLogout = async (req, res) => {
   try {
-    const { user } = req;
-    if (!user) {
-      return res.status(400).json({ success: false, errMsg: "User not authenticated" });
+    const token = req.cookies.userToken;
+    
+    if(token){
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const user = await userModel.findOne({_id :decoded.userId},{is_blocked: false,password: 0});      
+      if (!user) {
+        return res.status(400).json({ success: false, errMsg: "User not authenticated" });
+      }
+      await userModel.updateOne(
+        { _id: user._id },
+        { $unset: { currToken: 1 } }
+      );
     }
-
-    await userModel.updateOne(
-      { _id: user._id },
-      { $unset: { currToken: 1 } }
-    );
 
     return res
       .clearCookie("userToken", {

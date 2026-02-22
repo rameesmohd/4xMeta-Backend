@@ -10,7 +10,6 @@
 const fetchManager =async(req,res)=>{
     try {
         const { id } = req.query
-         console.log(id);
         const manager =  await managerModel.findOne({id : id },{password : 0})
         if(manager){
             return res.status(200).json({

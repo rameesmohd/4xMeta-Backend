@@ -28,8 +28,18 @@ const strictLimiter = rateLimit({
 //-----------------------------------WEB PUBLIC---------------------------------------------->
 router.post('/register',strictLimiter,webAuth.registerWebUser)
 router.post('/login',strictLimiter,webAuth.webLogin)
+
 router.get('/list-countries',strictLimiter,fetchCountryList)
 router.post('/callback-request',user.callbackRequestSubmit)
+
+router.get('/user/manager',manager.fetchManager)
+router.get("/account-history/manager",manager.fetchAccountData)
+
+router.get("/chart/daily", chart.getDailyChart);
+router.get("/chart/weekly", chart.getWeeklyChart);
+router.get("/chart/monthly", chart.getMonthlyChart);
+
+router.post('/logout',webAuth.webLogout)  
 
 //------------------------------------TELE PUBLIC--------------------------------------------->
 router.post('/user',strictLimiter,teleAuth.teleUser)
@@ -73,12 +83,8 @@ router.route('/withdraw/investment')
 router.post('/portfolio/history',investment.fetchInvTransactions)
 
 router.get('/manager-portfolio',manager.fetchManagerTele)
-router.get("/account-history/manager",manager.fetchAccountData)
 router.get('/transactions/manager',manager.fetchManagerTransactions)
 
-router.get("/chart/daily", chart.getDailyChart);
-router.get("/chart/weekly", chart.getWeeklyChart);
-router.get("/chart/monthly", chart.getMonthlyChart);
 router.get("/chart",chart.getUserGrowthChart)
 
 router.post('/kyc/otp',user.handleEmailVerificationOtp)
@@ -89,7 +95,6 @@ router.route("/rebate")
       .get(user.fetchRebateTx)
       .post(user.trasferRebateToWallet)
 
-router.get('/user/manager',manager.fetchManager)
 router.get('/investments',investment.fetchInvestments)
 
 router.get('/investment/trades',investment.fetchInvestmentTrades)
@@ -101,6 +106,5 @@ router.route('/ticket')
 .get(ticket.fetchTickets)
 
 router.get('/user',user.fetchUser)
-router.post('/logout',webAuth.webLogout)
 
 module.exports=router
