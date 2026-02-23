@@ -40,52 +40,104 @@ const getDailyChart = async (req, res) => {
 const getWeeklyChart = async (req, res) => {
   try {
     const { manager_id, weeks = 12 } = req.query;
+    if (!manager_id) return res.status(400).json({ error: "manager_id is required" });
 
-    if (!manager_id)
-      return res.status(400).json({ error: "manager_id is required" });
-
-    const start = dayjs().subtract(weeks, "week").startOf("week").toDate();
+    // ✅ use isoWeek consistently (start/end)
+    const start = dayjs().subtract(weeks, "week").startOf("isoWeek").toDate();
     const end = dayjs().endOf("day").toDate();
 
     const rows = await managerGrowthChart
-      .find({ 
-        manager: manager_id, 
-        date: { $gte: start, $lte: end } 
-      })
+      .find({ manager: manager_id, date: { $gte: start, $lte: end } })
       .sort({ date: 1 });
 
     const weekly = {};
 
     for (const row of rows) {
       const weekStart = dayjs(row.date).startOf("isoWeek");
-      const key = weekStart.format("YYYY-MM-DD");
       const weekEnd = dayjs(row.date).endOf("isoWeek");
-      const readableLabel = `${weekStart.format("MMM D")}–${weekEnd.format("D")}`;
+      const key = weekStart.format("YYYY-MM-DD");
+
+      // ✅ better label for cross-month/year
+      const sameMonth = weekStart.month() === weekEnd.month();
+      const label = sameMonth
+        ? `${weekStart.format("MMM D")}–${weekEnd.format("D")}`
+        : `${weekStart.format("MMM D")}–${weekEnd.format("MMM D")}`;
 
       if (!weekly[key]) {
         weekly[key] = {
-          total: 0,  // ✅ Changed from grow: 1
-          label: readableLabel,
-          weekStart: weekStart.toDate(),
+          total: 0,
+          label,
+          weekStart: key, // ✅ send ISO string
         };
       }
 
-      weekly[key].total += row.value;  // ✅ Sum instead of compound
+      weekly[key].total += Number(row.value || 0);
     }
 
     const result = Object.keys(weekly)
       .sort((a, b) => new Date(a) - new Date(b))
       .map((key) => ({
         week: weekly[key].label,
-        value: Number(weekly[key].total.toFixed(2)),  // ✅ Just return sum
+        week_start: weekly[key].weekStart, // ✅ important
+        value: Number(weekly[key].total.toFixed(2)),
       }));
 
-    res.json({ manager_id, weeks, data: result });
+    return res.json({ manager_id, weeks: Number(weeks), data: result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
+
+// const getWeeklyChart = async (req, res) => {
+//   try {
+//     const { manager_id, weeks = 12 } = req.query;
+
+//     if (!manager_id)
+//       return res.status(400).json({ error: "manager_id is required" });
+
+//     const start = dayjs().subtract(weeks, "week").startOf("week").toDate();
+//     const end = dayjs().endOf("day").toDate();
+
+//     const rows = await managerGrowthChart
+//       .find({ 
+//         manager: manager_id, 
+//         date: { $gte: start, $lte: end } 
+//       })
+//       .sort({ date: 1 });
+
+//     const weekly = {};
+
+//     for (const row of rows) {
+//       const weekStart = dayjs(row.date).startOf("isoWeek");
+//       const key = weekStart.format("YYYY-MM-DD");
+//       const weekEnd = dayjs(row.date).endOf("isoWeek");
+//       const readableLabel = `${weekStart.format("MMM D")}–${weekEnd.format("D")}`;
+
+//       if (!weekly[key]) {
+//         weekly[key] = {
+//           total: 0,  // ✅ Changed from grow: 1
+//           label: readableLabel,
+//           weekStart: weekStart.toDate(),
+//         };
+//       }
+
+//       weekly[key].total += row.value;  // ✅ Sum instead of compound
+//     }
+
+//     const result = Object.keys(weekly)
+//       .sort((a, b) => new Date(a) - new Date(b))
+//       .map((key) => ({
+//         week: weekly[key].label,
+//         value: Number(weekly[key].total.toFixed(2)),  // ✅ Just return sum
+//       }));
+
+//     res.json({ manager_id, weeks, data: result });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
 
 const getMonthlyChart = async (req, res) => {
   try {
