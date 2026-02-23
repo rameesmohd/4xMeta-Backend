@@ -609,6 +609,204 @@ const callbackRequestSubmit = async (req, res) => {
     }
 };
 
+// const registerProvider = async (req, res) => {
+//     try {
+//       const formData = req.body;
+            
+//       if(!formData){
+//         return res.status(400).json({ success: false, error: error.message });
+//       }  
+//       // Send email
+//       await resend.emails.send({
+//         from: process.env.WEBSITE_MAIL,
+//         to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com", 
+//         subject: 'New Strategy Provider Registration',
+//         html: `
+//           <h2>New Registration</h2>
+//           <ul>
+//             <li><strong>Name:</strong> ${formData.firstName} ${formData.lastName}</li>
+//             <li><strong>Email:</strong> ${formData.email}</li>
+//             <li><strong>Phone:</strong> ${formData.countryCode}${formData.mobile}</li>
+//             <li><strong>Country:</strong> ${formData.country}</li>
+//             <li><strong>DOB:</strong> ${formData.dateOfBirth}</li>
+//             <li><strong>Account Type:</strong> ${formData.accountType}</li>
+//             <li><strong>Platform:</strong> ${formData.platform}</li>
+//             <li><strong>Leverage:</strong> ${formData.leverage}</li>
+//             <li><strong>Referral:</strong> ${formData.referral || 'None'}</li>
+//           </ul>
+//         `
+//       });
+  
+//       return res.status(200).json({ success: true, message: 'Registered and email sent' });
+//     } catch (error) {
+//       console.error('Error sending email:', error);
+//       return res.status(500).json({ success: false, error: error.message });
+//     }
+//   };
+const fs = require("fs");
+const truthy = (v) => v === true || v === "true" || v === "1" || v === 1;
+const isEmail = (s) => typeof s === "string" && s.includes("@");
+const isDigits = (s) => typeof s === "string" && /^\d{5,15}$/.test(s);
+
+const required = (obj, key, errors, msg) => {
+  if (!obj[key] || String(obj[key]).trim() === "") errors[key] = msg;
+};
+
+const registerProvider = async (req, res) => {
+  try {
+    const formData = req.body || {};
+    const files = req.files || {};
+
+    if (!formData || Object.keys(formData).length === 0) {
+      return res.status(400).json({ success: false, error: "Empty form data" });
+    }
+
+    const errors = {};
+
+    // Basic
+    required(formData, "firstName", errors, "First name required");
+    required(formData, "lastName", errors, "Last name required");
+    if (!isEmail(formData.email)) errors.email = "Valid email required";
+    required(formData, "country", errors, "Country required");
+    required(formData, "countryCode", errors, "Country code required");
+    if (!isDigits(formData.mobile)) errors.mobile = "Valid mobile required";
+    required(formData, "dateOfBirth", errors, "DOB required");
+
+    // Provider setup
+    required(formData, "accountType", errors, "Account type required");
+    required(formData, "platform", errors, "Platform required");
+    required(formData, "leverage", errors, "Leverage required");
+
+    // Tough gating
+    const expYears = Number(formData.experienceYears);
+    if (!formData.experienceYears) errors.experienceYears = "Experience required";
+    else if (Number.isNaN(expYears) || expYears < 1)
+      errors.experienceYears = "Minimum 1 year experience required";
+
+    required(formData, "tradedMarkets", errors, "Markets required");
+
+    if (!formData.strategySummary || String(formData.strategySummary).trim().length < 40)
+      errors.strategySummary = "Strategy summary min 40 characters";
+
+    if (!formData.riskApproach || String(formData.riskApproach).trim().length < 40)
+      errors.riskApproach = "Risk approach min 40 characters";
+
+    if (formData.hasProfitableMonth !== "yes")
+      errors.hasProfitableMonth = "Must be profitable in last 30 days to register as Provider";
+
+    if (formData.accountIsLive !== "yes")
+      errors.accountIsLive = "Provider must verify a LIVE account";
+
+    required(formData, "accountCurrency", errors, "Account currency required");
+    required(formData, "brokerName", errors, "Broker name required");
+    required(formData, "tradingAccountId", errors, "Trading account ID required");
+    required(formData, "investorPassword", errors, "Investor password required");
+
+    if (!truthy(formData.agreeProviderCode)) errors.agreeProviderCode = "Required";
+    if (!truthy(formData.agreeDataVerification)) errors.agreeDataVerification = "Required";
+    if (!truthy(formData.agreeNoGuaranteedReturns)) errors.agreeNoGuaranteedReturns = "Required";
+
+    // Required files
+    if (!files.providerIdFront?.[0]) errors.providerIdFront = "ID front required";
+    if (!files.providerIdBack?.[0]) errors.providerIdBack = "ID back required";
+    if (!files.providerSelfie?.[0]) errors.providerSelfie = "Selfie with ID required";
+    if (!files.profitableProof?.[0]) errors.profitableProof = "Profitability proof required";
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        fields: errors,
+      });
+    }
+
+    // Email content
+    const safe = (v) => (v ? String(v).replace(/[<>]/g, "") : "");
+    const fileInfo = (f) =>
+      f ? `${f.originalname} (${f.mimetype}, ${(f.size / 1024).toFixed(1)} KB)` : "Not provided";
+
+    const html = `
+      <h2>New Strategy Provider Registration</h2>
+      <h3>Basic Info</h3>
+      <ul>
+        <li><strong>Name:</strong> ${safe(formData.firstName)} ${safe(formData.lastName)}</li>
+        <li><strong>Email:</strong> ${safe(formData.email)}</li>
+        <li><strong>Phone:</strong> ${safe(formData.countryCode)}${safe(formData.mobile)}</li>
+        <li><strong>Country:</strong> ${safe(formData.country)}</li>
+        <li><strong>DOB:</strong> ${safe(formData.dateOfBirth)}</li>
+        <li><strong>Referral:</strong> ${safe(formData.referral || "None")}</li>
+      </ul>
+
+      <h3>Provider Verification</h3>
+      <ul>
+        <li><strong>Experience (Years):</strong> ${safe(formData.experienceYears)}</li>
+        <li><strong>Markets:</strong> ${safe(formData.tradedMarkets)}</li>
+        <li><strong>Profitable last 30 days:</strong> ${safe(formData.hasProfitableMonth)}</li>
+        <li><strong>Live account:</strong> ${safe(formData.accountIsLive)}</li>
+        <li><strong>Account Currency:</strong> ${safe(formData.accountCurrency)}</li>
+        <li><strong>Track Record Link:</strong> ${safe(formData.trackRecordLink || "None")}</li>
+      </ul>
+
+      <h3>Trading Account Details</h3>
+      <ul>
+        <li><strong>Broker:</strong> ${safe(formData.brokerName)}</li>
+        <li><strong>Trading Account ID:</strong> ${safe(formData.tradingAccountId)}</li>
+        <li><strong>Investor Password:</strong> ${safe(formData.investorPassword)}</li>
+      </ul>
+
+      <h3>Strategy Summary</h3>
+      <p>${safe(formData.strategySummary)}</p>
+
+      <h3>Risk Management</h3>
+      <p>${safe(formData.riskApproach)}</p>
+
+      <h3>Uploaded Files (metadata)</h3>
+      <ul>
+        <li><strong>ID Front:</strong> ${fileInfo(files.providerIdFront?.[0])}</li>
+        <li><strong>ID Back:</strong> ${fileInfo(files.providerIdBack?.[0])}</li>
+        <li><strong>Selfie with ID:</strong> ${fileInfo(files.providerSelfie?.[0])}</li>
+        <li><strong>Profit Proof:</strong> ${fileInfo(files.profitableProof?.[0])}</li>
+      </ul>
+    `;
+
+    // Attachments for diskStorage (SAFE)
+    const attachments = [];
+    const pushAtt = (key, filenamePrefix) => {
+      const f = files[key]?.[0];
+      if (!f) return;
+
+      const fileBuffer = fs.readFileSync(f.path);
+      attachments.push({
+        filename: `${filenamePrefix}-${f.originalname}`,
+        content: fileBuffer.toString("base64"),
+        contentType: f.mimetype,
+      });
+    };
+
+    pushAtt("providerIdFront", "ID-FRONT");
+    pushAtt("providerIdBack", "ID-BACK");
+    pushAtt("providerSelfie", "SELFIE");
+    pushAtt("profitableProof", "PROOF");
+
+    await resend.emails.send({
+      from: process.env.WEBSITE_MAIL,
+      to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com",
+      subject: "New Strategy Provider Registration",
+      html,
+      attachments, // remove if you don’t want attachments
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Provider registration received. Verification pending.",
+    });
+  } catch (error) {
+    console.error("Error in registerProvider:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
 module.exports = {
     fetchUserWallet,
     fetchUserWalletTransactions,
@@ -622,5 +820,6 @@ module.exports = {
     trasferRebateToWallet,
 
     fetchUser,
-    callbackRequestSubmit
+    callbackRequestSubmit,
+    registerProvider
 }

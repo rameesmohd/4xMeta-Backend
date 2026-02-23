@@ -25,8 +25,28 @@ const strictLimiter = rateLimit({
   max: 20,
 });
 
+const providerUploads = upload.fields([
+  { name: "providerIdFront", maxCount: 1 },
+  { name: "providerIdBack", maxCount: 1 },
+  { name: "providerSelfie", maxCount: 1 },
+  { name: "profitableProof", maxCount: 1 },
+]);
+
+router.post("/register-provider", (req, res, next) => {
+  providerUploads(req, res, (err) => {
+    if (err) {
+      // IMPORTANT: handle multer errors cleanly
+      return res.status(400).json({
+        success: false,
+        error: err.message || "Upload failed",
+      });
+    }
+    next();
+  });
+}, user.registerProvider);
 //-----------------------------------WEB PUBLIC---------------------------------------------->
 router.post('/register',strictLimiter,webAuth.registerWebUser)
+// router.post('/register-provider',providerUploads,providerUploads,user.registerProvider)
 router.post('/login',strictLimiter,webAuth.webLogin)
 
 router.get('/list-countries',strictLimiter,fetchCountryList)
