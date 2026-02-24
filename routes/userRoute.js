@@ -45,9 +45,15 @@ router.post("/register-provider", (req, res, next) => {
   });
 }, user.registerProvider);
 //-----------------------------------WEB PUBLIC---------------------------------------------->
-router.post('/register',strictLimiter,webAuth.registerWebUser)
-// router.post('/register-provider',providerUploads,providerUploads,user.registerProvider)
+router.post('/register',strictLimiter,upload.none(),webAuth.registerWebUser)
+
+router.post('/login/provider',strictLimiter,webAuth.providerLogin)
 router.post('/login',strictLimiter,webAuth.webLogin)
+
+router.route('/forget-password')
+    .get(webAuth.forgetPassGenerateOTP)
+    .post(webAuth.validateForgetOTP)
+    .patch(webAuth.resetPassword)
 
 router.get('/list-countries',strictLimiter,fetchCountryList)
 router.post('/callback-request',user.callbackRequestSubmit)
@@ -120,6 +126,8 @@ router.get('/investments',investment.fetchInvestments)
 router.get('/investment/trades',investment.fetchInvestmentTrades)
 router.get('/investment/transactions',investment.fetchInvestmentTransactions)
 router.get('/investment',investment.fetchInvById)
+router.get('/pending-deposit',investment.checkPendingDeposit)
+
 
 router.route('/ticket')
 .post(upload.array('upload',5),ticket.submitTicket)

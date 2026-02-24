@@ -4,6 +4,10 @@ const userModel = require("../../../models/user.js");
 const { validateRegister,validateLogin } = require("../../common/validations.js");
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const OtpModel = require('../../../models/otp');
+const { forgotMail } = require("../../../assets/html/verification.js");
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, 
@@ -270,10 +274,131 @@ const webLogout = async (req, res) => {
   }
 };
 
+const providerLogin = async (req, res) => {
+  try {    
+    const { provider_account, provider_pass } = req.body;
+    console.log(provider_account, provider_pass);
+    
+    return res.status(400).json({ errMsg: "User not exist!" }); 
+  } catch (error) {
+    console.error("Provider login error:", error);
+    return res.status(500).json({
+      success: false,
+      errMsg: "Server error!",
+      error: error.message,
+    });
+  }
+}
+
+const forgetPassGenerateOTP = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) return res.status(400).json({ errMsg: "Email is required" });
+
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ errMsg: "User not found. Please sign up to continue!" });
+    }
+
+    const generateOTP = Math.floor(100000 + Math.random() * 900000);
+
+    try {
+      await resend.emails.send({
+        from: process.env.WEBSITE_MAIL,
+        to: user.email,
+        subject: "Verify email",
+        html: forgotMail(generateOTP, user.first_name),
+      });
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+      return res.status(500).json({ errMsg: "Failed to send verification email. Please try again!" });
+    }
+
+    // OPTIONAL: delete old OTPs for this user
+    await OtpModel.deleteMany({ user: user._id });
+
+    const newOtp = await OtpModel.create({
+      user: user._id,
+      otp: generateOTP,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+    });
+
+    return res.status(200).json({ otp_id: newOtp._id, msg: "Otp sent successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ errMsg: "server side error", error: error.message });
+  }
+};
+
+const validateForgetOTP = async (req, res) => {
+  try {
+    const { id, otp } = req.body;
+
+    if (!id || !otp) return res.status(400).json({ errMsg: "OTP and id are required" });
+
+    const forgetPassOtp = await OtpModel.findById(id);
+    if (!forgetPassOtp) return res.status(400).json({ errMsg: "OTP timeout, please try again" });
+
+    if (forgetPassOtp.expiresAt && forgetPassOtp.expiresAt < new Date()) {
+      return res.status(400).json({ errMsg: "OTP expired, please request a new one!" });
+    }
+
+    if (String(forgetPassOtp.otp) !== String(otp)) {
+      return res.status(400).json({ errMsg: "Incorrect OTP!" });
+    }
+
+    return res.status(200).json({ msg: "OTP verification successful" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ errMsg: "server side error", error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { otp, id, newPassword } = req.body;
+
+    if (!id || !otp || !newPassword) {
+      return res.status(400).json({ errMsg: "All fields are required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ errMsg: "Password is too short! It must be at least 8 characters long." });
+    }
+
+    const forgetData = await OtpModel.findById(id);
+    if (!forgetData) return res.status(400).json({ errMsg: "Session timeout, please try again!" });
+
+    if (forgetData.expiresAt && forgetData.expiresAt < new Date()) {
+      return res.status(400).json({ errMsg: "OTP expired, please request a new one!" });
+    }
+
+    if (String(forgetData.otp) !== String(otp)) {
+      return res.status(400).json({ errMsg: "Invalid OTP!" });
+    }
+
+    const hashpassword = await bcrypt.hash(newPassword, 10);
+    await userModel.updateOne({ _id: forgetData.user }, { $set: { password: hashpassword } });
+
+    // prevent OTP reuse
+    await OtpModel.deleteOne({ _id: id });
+
+    return res.status(200).json({ msg: "Password changed successfully!" });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return res.status(500).json({ errMsg: "Server error, please try again later.", error: error.message });
+  }
+};
+
 module.exports = {
    registerWebUser,
    webLogin,
-   webLogout
+   webLogout,
+   providerLogin,
+   forgetPassGenerateOTP, 
+   validateForgetOTP, 
+   resetPassword
 }
 
 

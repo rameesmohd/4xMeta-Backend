@@ -7,6 +7,7 @@ const InvestmentTrades = require('../../models/investmentTrades');
 const UserTransaction = require('../../models/userTx');
 const BotUserModel = require('../../models/botUsers')
 const BonusModel = require('../../models/bonus');
+const { fetchAndUseLatestRollover } = require("../rolloverController");
 
 const makeInvestment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -826,11 +827,14 @@ const fetchInvById=async(req,res)=>{
       user:userId,
     }).populate('manager')
 
+     const latestRollover = await fetchAndUseLatestRollover()   
+
     return res.status(200).json({
       status : "success",
       result: {
         investment,
-        user
+        user,
+        rollover : latestRollover
       },
     });
   } catch (error) {
@@ -840,6 +844,43 @@ const fetchInvById=async(req,res)=>{
     });
   }
 }
+
+const checkPendingDeposit = async (req, res) => {
+  try {
+    const {id} = req.query;
+    if (!id) {
+      return res.status(400).json({
+        errMsg: "Missing investment ID"
+      });
+    }
+
+    const user = req.user;
+    const userId = user._id;
+
+    const pendingDeposits = await InvestmentTransaction.find({
+      investment: id,
+      user: userId,
+      status: "pending",
+      type: "deposit",
+    })
+    .sort({ createdAt: -1 })
+    .select({ _id: 1, amount: 1, createdAt: 1, status: 1 })
+    .lean();
+
+    return res.status(200).json({
+      status: "success",
+      result: {
+        hasPending: !!pendingDeposits,
+        pendingDeposits,
+      },
+    });
+  } catch (error) {
+    console.error("Pending Deposit Check Error:", error);
+    return res.status(500).json({
+      errMsg: error.message || "Server error",
+    });
+  }
+};
 
 module.exports={
     makeInvestment,
@@ -855,5 +896,6 @@ module.exports={
     makeBonusInvestment,
     fetchInvestmentTrades,
     fetchInvestmentTransactions,
-    fetchInvById
+    fetchInvById,
+    checkPendingDeposit
 }
