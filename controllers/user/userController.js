@@ -286,8 +286,13 @@ const updateUserDetails = async (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid email format" });
       }
 
+      const alreadyExist = await UserModel.findOne({email})
+      if(alreadyExist){
+        return res.status(400).json({ success: false, message: "Email is already registered with another account." });
+      }
+
       update.email = email;
-      update["kyc.is_email_verified"] = false; // reset email verification
+      update["kyc.is_email_verified"] = false; 
     }
 
     const result = await UserModel.findByIdAndUpdate(
