@@ -141,7 +141,7 @@ cron.schedule("0 */4 * * 1-5", () => {
   console.log("⏱ Running scheduled 4hr rollover");
   createRollover("4hr");
 });
-createRollover("4hr");
+// createRollover("4hr");
 
 
 // 15-minute testing (enable when needed)

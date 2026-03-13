@@ -736,9 +736,10 @@ const fetchInvestments=async(req,res)=>{
   try {
     const user = req.user;
     const userId = req.user._id
-    const investment = await investmentModel.find({
-      user:userId,
-    })
+    const investment = await investmentModel.find({ user: userId }).populate({
+      path: "manager",
+      select: "img_url ",
+    });
 
     return res.status(200).json({
       status : "success",
