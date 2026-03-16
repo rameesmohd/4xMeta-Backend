@@ -11,6 +11,8 @@ const chart = require('../controllers/chartController');
 const bonus = require('../controllers/user/bonusController')
 const ticket = require('../controllers/user/ticketContoller')
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
+const { activity } = require('../controllers/common/activityController')
+
 const upload = require('../config/multer');
 const { default: rateLimit } = require('express-rate-limit');
 
@@ -57,6 +59,8 @@ router.route('/forget-password')
 
 router.get('/list-countries',strictLimiter,fetchCountryList)
 router.post('/callback-request',user.callbackRequestSubmit)
+
+router.get("/activity",activity)
 
 router.get('/user/manager',manager.fetchManager)
 router.get("/account-history/manager",manager.fetchAccountData)

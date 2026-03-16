@@ -17,7 +17,9 @@ const connectDB = require('./config/mongoose.js');
   try {
     require('./cron/rolloverService.js');
     require('./cron/intervalservice.js');
-
+    
+    
+    require("./cron/acvtivityService.js")
     console.log("✅ All cron jobs initialized");
   } catch (err) {
     console.error("❌ Error loading cron jobs:", err);
