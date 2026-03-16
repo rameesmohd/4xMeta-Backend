@@ -48,4 +48,13 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-module.exports = upload;
+const cleanupFiles = (files = []) => {
+  files.forEach(file => {
+    fs.unlink(file.path, err => {
+      if (err) console.error("Cleanup failed for:", file.path, err);
+    });
+  });
+};
+
+module.exports = { upload, cleanupFiles };
+

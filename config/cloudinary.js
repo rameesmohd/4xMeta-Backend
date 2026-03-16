@@ -9,25 +9,14 @@ cloudinary.config({
     timeout: 600000 
   });
 
-const uploadToCloudinary = (filePath) => {
-    return new Promise((resolve, reject) => {
-      cloudinary.uploader.upload(
-        filePath,
-        { folder: "kyc_documents", resource_type: "auto" },
-        (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            // 🔹 Delete local file after successful upload
-            fs.unlink(filePath, (err) => {
-              if (err) console.error("Failed to delete file:", err);
-            });
-            resolve(result.secure_url);
-          }
-        }
-      );
-    });
+const uploadToCloudinary = async (filePath) => {
+  const result = await cloudinary.uploader.upload(filePath, {
+    folder: "kyc_documents",
+    resource_type: "auto",
+  });
+  return result.secure_url;
 };
 
 module.exports = { uploadToCloudinary };
+
 

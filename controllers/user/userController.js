@@ -14,6 +14,12 @@ const { sendKycRequestedAlert } = require('../bot/botAlerts');
 const RebateTransactionModel = require('../../models/rebateTx');
 const UserTransaction = require('../../models/userTx');
 const { default: mongoose } = require('mongoose');
+const fs = require("fs");
+const { cleanupFiles } = require('../../config/multer');
+const truthy = (v) => v === true || v === "true" || v === "1" || v === 1;
+const isEmail = (s) => typeof s === "string" && s.includes("@");
+const isDigits = (s) => typeof s === "string" && /^\d{5,15}$/.test(s);
+
 
 const fetchUserWallet = async (req, res) => {
   try {
@@ -396,51 +402,58 @@ const handleEmailVerificationOtp = async (req, res) => {
   }
 };
 
-const handleKycProofSubmit = async (req, res) => {
+const handleKycProofSubmit = (proofType) => async (req, res) => {
+  const localFiles = req.files || [];
+
   try {
-    const { type } = req.body;
-    const user = req.user;
-
-    if (!type || !req.files) {
-      return res.status(400).json({ success: false, message: "Invalid request" });
+    if (!localFiles.length) {
+      return res.status(400).json({ success: false, message: "No files uploaded" });
     }
 
-    const fileUrls = await Promise.all(
-      req.files.map((file) => uploadToCloudinary(file.path))
-    );
-
-    // Fetch the user
-    const currentUser = await UserModel.findById(user._id);
-    if (!currentUser) return res.status(404).json({ success: false, message: "User not found" });
-
-    let newStep = currentUser.kyc.step;
-    if (newStep < 4) newStep++; // Prevent overflow
-
-    let updateObj = { "kyc.step": newStep };
-
-    if (type === "identity") {
-      updateObj["kyc.identify_proof"] = fileUrls;
-      updateObj["kyc.identify_proof_status"] = "submitted";
-    } else if (type === "residential") {
-      updateObj["kyc.residential_proof"] = fileUrls;
-      updateObj["kyc.residential_proof_status"] = "submitted";
-    } else {
-      return res.status(400).json({ success: false, message: "Invalid proof type" });
+    // Upload all files, then clean up locals regardless of outcome
+    let fileUrls;
+    try {
+      fileUrls = await Promise.all(
+        localFiles.map(file => uploadToCloudinary(file.path))
+      );
+    } finally {
+      cleanupFiles(localFiles); // always runs, success or failure
     }
+
+    const currentUser = await UserModel.findById(req.user._id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const KYC_MAX_STEP = 4;
+    const newStep = Math.min(currentUser.kyc.step + 1, KYC_MAX_STEP);
+
+    const fieldMap = {
+      identity:    { proof: "kyc.identify_proof",    status: "kyc.identify_proof_status" },
+      residential: { proof: "kyc.residential_proof", status: "kyc.residential_proof_status" },
+    };
+
+    const fields = fieldMap[proofType];
+    // No else needed — proofType is controlled by the route, not user input
 
     const updatedUser = await UserModel.findByIdAndUpdate(
-      user._id,
-      { $set: updateObj },
+      req.user._id,
+      {
+        $set: {
+          "kyc.step": newStep,
+          [fields.proof]: fileUrls,
+          [fields.status]: "submitted",
+        },
+      },
       { new: true }
     );
 
-    if(updatedUser){
-      // after saving KYC request
+    if (updatedUser) {
       await sendKycRequestedAlert({
         user: {
           first_name: updatedUser.telegram.first_name,
-          last_name: updatedUser.telegram.last_name,
-          username: updatedUser.telegram.username,
+          last_name:  updatedUser.telegram.last_name,
+          username:   updatedUser.telegram.username,
           telegramId: updatedUser.telegram.id,
         },
         kycLevel: updatedUser.kyc.step,
@@ -613,45 +626,6 @@ const callbackRequestSubmit = async (req, res) => {
         return res.status(500).json({ errMsg: "There was an issue submitting your request. Please try again later." });
     }
 };
-
-// const registerProvider = async (req, res) => {
-//     try {
-//       const formData = req.body;
-            
-//       if(!formData){
-//         return res.status(400).json({ success: false, error: error.message });
-//       }  
-//       // Send email
-//       await resend.emails.send({
-//         from: process.env.WEBSITE_MAIL,
-//         to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com", 
-//         subject: 'New Strategy Provider Registration',
-//         html: `
-//           <h2>New Registration</h2>
-//           <ul>
-//             <li><strong>Name:</strong> ${formData.firstName} ${formData.lastName}</li>
-//             <li><strong>Email:</strong> ${formData.email}</li>
-//             <li><strong>Phone:</strong> ${formData.countryCode}${formData.mobile}</li>
-//             <li><strong>Country:</strong> ${formData.country}</li>
-//             <li><strong>DOB:</strong> ${formData.dateOfBirth}</li>
-//             <li><strong>Account Type:</strong> ${formData.accountType}</li>
-//             <li><strong>Platform:</strong> ${formData.platform}</li>
-//             <li><strong>Leverage:</strong> ${formData.leverage}</li>
-//             <li><strong>Referral:</strong> ${formData.referral || 'None'}</li>
-//           </ul>
-//         `
-//       });
-  
-//       return res.status(200).json({ success: true, message: 'Registered and email sent' });
-//     } catch (error) {
-//       console.error('Error sending email:', error);
-//       return res.status(500).json({ success: false, error: error.message });
-//     }
-//   };
-const fs = require("fs");
-const truthy = (v) => v === true || v === "true" || v === "1" || v === 1;
-const isEmail = (s) => typeof s === "string" && s.includes("@");
-const isDigits = (s) => typeof s === "string" && /^\d{5,15}$/.test(s);
 
 const required = (obj, key, errors, msg) => {
   if (!obj[key] || String(obj[key]).trim() === "") errors[key] = msg;
