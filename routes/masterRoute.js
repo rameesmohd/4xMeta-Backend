@@ -17,7 +17,9 @@ const {
         sendEmail,
         masterLogout,
         fetchBotUsers,
-        fetchBotUsersStats
+        fetchBotUsersStats,
+        fetchHelpRequests,
+        changeHelpRequestStatus
     } =require('../controllers/master/masterController')
 const { fetchAddressBalance } = require('../controllers/user/paymentController')
 const {verifyToken} = require('../middlewares/masterAuth')
@@ -53,9 +55,9 @@ router.post('/login',masterLogin)
 
 router.use(verifyToken)
 
-// router.route('/help-center')
-//     .get(fetchHelpRequests)
-//     .patch(changeHelpRequestStatus)
+router.route('/help-center')
+    .get(fetchHelpRequests)
+    .patch(changeHelpRequestStatus)
 
 router.route('/users')
     .get(fetchUser)

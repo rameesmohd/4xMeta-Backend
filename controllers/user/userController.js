@@ -602,7 +602,7 @@ const callbackRequestSubmit = async (req, res) => {
         const { client, name, surname, contactnumber, emailaddress, agreement } = req.body;
 
         // Validate input
-        if (!name || !surname || !contactnumber || !emailaddress) {
+        if (!name || !surname || !emailaddress) {
             return res.status(400).json({ errMsg: "Please fill in all required fields." });
         }
 
