@@ -328,6 +328,48 @@ const registerVerifyOtp = async (req, res) => {
   }
 };
 
+const registerResendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ errMsg: "Email is required" });
+    }
+
+    // Must have a pending registration (formData stored from send-otp step)
+    const existing = await OtpModel.findOne({ email: email.toLowerCase() });
+    if (!existing) {
+      return res.status(400).json({ 
+        errMsg: "No pending registration found. Please fill the form again." 
+      });
+    }
+
+    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Update OTP + reset attempts + reset expiry
+    await OtpModel.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        otp: randomOtp,
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      }
+    );
+
+    await resend.emails.send({
+      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      to: email,
+      subject: "Your new verification code – 4xMeta",
+      html: verification(randomOtp, existing.formData?.firstName || ""),
+    });
+
+    return res.status(200).json({ success: true, msg: "OTP resent successfully." });
+
+  } catch (error) {
+    return res.status(500).json({ errMsg: "Failed to resend OTP", error: error.message });
+  }
+};
+
 const webLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -570,7 +612,8 @@ module.exports = {
    validateForgetOTP, 
    resetPassword,
    registerSendOtp,
-   registerVerifyOtp
+   registerVerifyOtp,
+   registerResendOtp
 }
 
 

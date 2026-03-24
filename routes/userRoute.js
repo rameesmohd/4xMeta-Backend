@@ -48,7 +48,8 @@ router.post("/register-provider", (req, res, next) => {
 }, user.registerProvider);
 //-----------------------------------WEB PUBLIC---------------------------------------------->
 router.post('/register/send-otp',strictLimiter,upload.none(),webAuth.registerSendOtp)
-router.post('/register/verify-otp',strictLimiter,upload.none(),webAuth.registerVerifyOtp)
+router.post('/register/verify-otp',strictLimiter,upload.none(),webAuth.registerVerifyOtp) 
+router.post('/register/resend-otp',strictLimiter,upload.none(),webAuth.registerResendOtp) 
 
 router.post('/register',strictLimiter,upload.none(),webAuth.registerWebUser)
 
