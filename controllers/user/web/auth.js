@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const OtpModel = require('../../../models/otp');
-const { forgotMail } = require("../../../assets/html/verification.js");
+const { forgotMail, verification } = require("../../../assets/html/verification.js");
 const { welcomeMail } = require("../../../assets/html/transactional.js")
 const createToken = (userId) => {
     return jwt.sign({ userId }, 
@@ -165,6 +165,164 @@ const registerWebUser = async (req, res) => {
     }
 
     return res.status(500).json({ errMsg: "Error registering user", error: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+const registerSendOtp = async (req, res) => {
+  try {
+    const { valid, errors } = validateRegister(req.body);
+    if (!valid) {
+      return res.status(400).json({ errMsg: "Validation failed", errors });
+    }
+
+    const { email, firstName } = req.body;
+
+    // Check duplicate early
+    const existing = await userModel.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(400).json({ errMsg: "Email already registered. Please login." });
+    }
+
+    // Generate and store OTP — keyed to email, not user._id (user doesn't exist yet)
+    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    await OtpModel.deleteMany({ email: email.toLowerCase() });
+    await OtpModel.create({
+      email: email.toLowerCase(),
+      otp: randomOtp,
+      formData: req.body,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    await resend.emails.send({
+      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      to: email,
+      subject: "Verify Your Email – 4xMeta",
+      html: verification(randomOtp, firstName),
+    });
+
+    return res.status(200).json({ success: true, msg: "OTP sent to your email." });
+  } catch (error) {
+    return res.status(500).json({ errMsg: "Failed to send OTP", error: error.message });
+  }
+};
+
+const registerVerifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const otpRecord = await OtpModel.findOne({ email: email.toLowerCase() });
+
+    if (!otpRecord) {
+      return res.status(400).json({ errMsg: "OTP expired or not found. Please register again." });
+    }
+
+    if (otpRecord.otp !== otp) {
+      otpRecord.attempts += 1;
+      if (otpRecord.attempts >= 3) {
+        await OtpModel.deleteMany({ email: email.toLowerCase() });
+        return res.status(403).json({ errMsg: "Too many attempts. Please register again." });
+      }
+      await otpRecord.save();
+      return res.status(400).json({
+        errMsg: `Incorrect OTP. ${3 - otpRecord.attempts} attempt(s) left.`,
+      });
+    }
+
+    // OTP correct — pull stored form data and create user
+    const {
+      firstName, lastName, country, countryCode,
+      mobile, dateOfBirth, password, referral,
+    } = otpRecord.formData;
+
+    // Check duplicate again (edge case: someone registered in the OTP window)
+    const alreadyExists = await userModel.findOne({ email: email.toLowerCase() }).session(session);
+    if (alreadyExists) {
+      await session.abortTransaction();
+      return res.status(400).json({ errMsg: "Email already registered." });
+    }
+
+    let referredById = null;
+    if (referral) {
+      const refUser = await userModel.findOne({ user_id: referral }).session(session);
+      if (refUser) referredById = refUser._id;
+    }
+
+    const hashpassword = await bcrypt.hash(password, 10);
+    const webUserId = await generateUniqueWebUserId();
+
+    const newUser = await userModel.create([{
+      login_type: "web",
+      user_id: webUserId,
+      email: email.toLowerCase(),
+      password: hashpassword,
+      first_name: firstName,
+      last_name: lastName,
+      country,
+      country_code: countryCode,
+      mobile,
+      date_of_birth: dateOfBirth,
+      "kyc.is_email_verified": true,
+      "kyc.step" : 1,   
+      referral: { referred_by: referredById },
+    }], { session });
+
+    const createdUser = newUser[0];
+
+    if (referredById) {
+      await userModel.updateOne(
+        { _id: referredById },
+        {
+          $inc: { "referral.total_referrals": 1 },
+          $push: { "referral.referrals": createdUser._id },
+        },
+        { session }
+      );
+    }
+
+    const token = createToken(createdUser._id);
+    await userModel.updateOne(
+      { _id: createdUser._id },
+      { $set: { currToken: token } },
+      { session }
+    );
+
+    await OtpModel.deleteMany({ email: email.toLowerCase() });
+    await session.commitTransaction();
+
+    await resend.emails.send({
+      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      to: createdUser.email,
+      subject: "Welcome to 4xMeta",
+      html: welcomeMail({
+        firstName: createdUser.first_name,
+        lastName: createdUser.last_name,
+        email: createdUser.email,
+        userId: createdUser.user_id,
+      }),
+    });
+
+    return res
+      .cookie("userToken", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        ...(process.env.NODE_ENV === "production" && { domain: process.env.DOMAIN }),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .status(201)
+      .json({ success: true, msg: "Registration complete!", data: createdUser });
+
+  } catch (error) {
+    await session.abortTransaction();
+    if (error?.code === 11000) {
+      return res.status(409).json({ errMsg: "Duplicate value error", fields: error.keyValue });
+    }
+    return res.status(500).json({ errMsg: "Registration failed", error: error.message });
   } finally {
     session.endSession();
   }
@@ -410,7 +568,9 @@ module.exports = {
    providerLogin,
    forgetPassGenerateOTP, 
    validateForgetOTP, 
-   resetPassword
+   resetPassword,
+   registerSendOtp,
+   registerVerifyOtp
 }
 
 

@@ -6,7 +6,7 @@ const otpSchema = new Schema(
     user: {
       type: Schema.Types.ObjectId,
       ref: "users",
-      required: true,
+      required: false,
     },
     otp: {
       type: String,
@@ -22,6 +22,16 @@ const otpSchema = new Schema(
       type: Date,
       required: true,
       default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+    },
+
+    formData: { 
+      type: Object, 
+    },
+
+    email: {
+      type: String,
+      index: true,
+      sparse: true
     },
   },
   { timestamps: true }
