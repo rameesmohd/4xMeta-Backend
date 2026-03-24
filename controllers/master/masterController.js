@@ -689,7 +689,7 @@ const sendEmail = async (req, res) => {
 
     try {
         await resend.emails.send({
-          from: process.env.WEBSITE_MAIL,
+          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
           to,
           subject,
           html: sendEmailToUser({title,username,desOne,desTwo,desThree}),

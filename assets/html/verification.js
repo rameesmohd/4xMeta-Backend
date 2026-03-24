@@ -139,65 +139,10 @@ const sendEmailToUser = ({ title, username, desOne, desTwo, desThree }) =>
     ${note("ℹ️", "If you have any questions about this notification, please reach out to our support team.", "#eff6ff", "#93c5fd", "#1e40af")}
   `));
 
-/* ─────────────────────────────────────────
-   5. Purchase Confirmation (User)
-───────────────────────────────────────── */
-const purchaseConfirmation = (userName) =>
-  emailTemplate(bodyWrap(`
-    ${heading("Challenge Purchase Confirmed")}
-    ${hi(userName)}
-    ${para("Your challenge purchase has been received and confirmed. Our team is now processing your order and setting up your trading environment.")}
-
-    ${divider()}
-
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;margin-bottom:20px;">
-      <tr>
-        <td style="padding:16px;background:linear-gradient(135deg,#eff6ff,#ecfeff);border-radius:12px;border:1px solid #bfdbfe;">
-          <p style="margin:0 0 10px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">What happens next?</p>
-          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;">
-            <tr>
-              <td style="padding:5px 0;">
-                <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#334155;line-height:1.6;">
-                  ✅ &nbsp;Order received and confirmed<br/>
-                  ⏳ &nbsp;Trading account is being configured<br/>
-                  📧 &nbsp;Account credentials sent once ready
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    ${para("You will receive another email with your trading account credentials as soon as your challenge is ready. This typically takes a short time.")}
-    ${note("📌", "Please check your inbox (and spam folder) for your account details email. If you have not received it within 24 hours, contact our support team.", "#f8fafc", "#cbd5e1", "#475569")}
-  `));
-
-/* ─────────────────────────────────────────
-   6. Purchase Confirmation (Admin)
-───────────────────────────────────────── */
-const purchaseConfirmationAdmin = (userName) =>
-  emailTemplate(bodyWrap(`
-    ${heading("New Challenge Purchase — Action Required")}
-    ${hi("Admin")}
-    ${para("A new challenge order has been placed and requires your attention. Please review the details below and initiate account provisioning.")}
-
-    ${divider()}
-
-    ${infoRow("Ordered by", userName)}
-    ${infoRow("Action Required", "Provision trading account and send credentials to user")}
-    ${infoRow("Priority", "Standard")}
-
-    ${divider()}
-
-    ${note("🚨", "Please process this order promptly. The user has been notified that their account is being set up and is awaiting credentials.", "#fff7ed", "#f97316", "#9a3412")}
-  `));
 
 module.exports = {
   verification,
   forgotMail,
-  purchaseConfirmation,
-  purchaseConfirmationAdmin,
   withdrawalVerification,
   sendEmailToUser,
 };

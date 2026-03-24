@@ -8,7 +8,7 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const OtpModel = require('../../../models/otp');
 const { forgotMail } = require("../../../assets/html/verification.js");
-
+const { welcomeMail } = require("../../../assets/html/transactional.js")
 const createToken = (userId) => {
     return jwt.sign({ userId }, 
         process.env.JWT_SECRET, 
@@ -126,6 +126,18 @@ const registerWebUser = async (req, res) => {
 
     await session.commitTransaction();
 
+    await resend.emails.send({
+      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      to: createdUser.email,
+      subject: "Welcome to 4xMeta",
+      html: welcomeMail({
+        firstName: createdUser.first_name,
+        lastName:  createdUser.last_name,
+        email:     createdUser.email,
+        userId:    createdUser.user_id,
+      }),
+    });
+    
     return res
       .cookie("userToken", token, {
         httpOnly: true,
@@ -305,7 +317,7 @@ const forgetPassGenerateOTP = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: process.env.WEBSITE_MAIL,
+        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
         to: user.email,
         subject: "Verify email",
         html: forgotMail(generateOTP, user.first_name),

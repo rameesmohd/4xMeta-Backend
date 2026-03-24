@@ -8,6 +8,9 @@ const UserTransaction = require('../../models/userTx');
 const BotUserModel = require('../../models/botUsers')
 const BonusModel = require('../../models/bonus');
 const { fetchAndUseLatestRollover } = require("../rolloverController");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const { investmentMail } = require("../../assets/html/transactional")
 
 const makeInvestment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -164,6 +167,25 @@ const makeInvestment = async (req, res) => {
         { $inc: { total_investors: 1 } },
         { session }
       );
+
+      if (user.email) {
+        await resend.emails.send({
+          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+          to: user.email,
+          subject: "Investment Confirmed — 4xMeta",
+          html: investmentMail({
+            userName:        user.first_name || user.telegram?.first_name || "User",
+            amount:          amount,
+            managerName:     manager.name || manager.nickname,
+            managerNickname: manager.nickname,
+            tradingInterval: manager.trading_interval,
+            minWithdrawal:   manager.min_withdrawal,
+            performanceFee:  manager.performance_fees_percentage,
+            invId:           investment.inv_id,
+            date:            new Date().toLocaleString("en-US", { timeZone: "UTC" }) + " UTC",
+          }),
+        });
+      }
 
       return res.status(201).json({
         status : "success",

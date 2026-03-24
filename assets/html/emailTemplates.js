@@ -18,6 +18,7 @@ const SUPPORT_MAIL = process.env.SUPPORT_MAIL || "-";
  *
  * If LOGO_URL is empty, header falls back to a styled text badge.
  */
+
 const LOGO_URL = process.env.LOGO_URL || "";
 
 const emailTemplate = (body) => `

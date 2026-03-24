@@ -336,7 +336,7 @@ const handleEmailVerificationOtp = async (req, res) => {
 
       // send email using resend
       await resend.emails.send({
-        from: process.env.WEBSITE_MAIL,
+        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
         to: user.email,
         subject: "Verify Your Email",
         html: verification(randomOtp, user.first_name ? user.first_name : user.telegram.first_name),
@@ -607,7 +607,7 @@ const callbackRequestSubmit = async (req, res) => {
         }
 
         await resend.emails.send({
-            from: process.env.WEBSITE_MAIL,
+            from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
             to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com", 
             subject: "New Contact Form Submission",
             html: `
@@ -768,7 +768,7 @@ const registerProvider = async (req, res) => {
     pushAtt("profitableProof", "PROOF");
 
     await resend.emails.send({
-      from: process.env.WEBSITE_MAIL,
+      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
       to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com",
       subject: "New Strategy Provider Registration",
       html,

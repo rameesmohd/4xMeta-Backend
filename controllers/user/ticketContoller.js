@@ -4,6 +4,9 @@ const fs = require("fs");
 const cloudinary = require("../../config/cloudinary");
 const { cleanupFiles } = require('../../config/multer');
 const { uploadToCloudinary } = cloudinary;
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const { ticketSubmittedMail } = require("../../assets/html/transactional")
 
 const submitTicket = async (req, res) => {
   const localFiles = req.files || [];
@@ -51,6 +54,21 @@ const submitTicket = async (req, res) => {
       description: description.trim(),
       uploads: uploadedFiles,
     });
+
+    if (req.user.email) {
+      await resend.emails.send({
+        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        to: req.user.email,
+        subject: `Support Ticket Received — ${ticket.ticket_id}`,
+        html: ticketSubmittedMail({
+          userName:    req.user.first_name || req.user.telegram?.first_name || "User",
+          ticketId:    ticket.ticket_id,
+          category:    ticket.category,
+          description: ticket.description,
+        }),
+      });
+    }
+
 
     return res.status(201).json({ success: true, ticket, msg: "Ticket submitted successfully" });
 

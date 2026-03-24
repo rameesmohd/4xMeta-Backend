@@ -3,6 +3,9 @@ const depositsModel = require('../../models/deposit');
 const userTransactionModel = require('../../models/userTx')
 const userModel = require('../../models/user')
 const {sendUserDepositAlert} =require("../../controllers/bot/botAlerts")
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const { depositSuccessMail,withdrawalRequestMail } = require("../../assets/html/transactional")
 
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
@@ -196,6 +199,23 @@ const trc20CheckAndTransferPayment = async (req, res) => {
         })
         }
       }
+
+      if (updatedUserData?.email) {
+        await resend.emails.send({
+          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+          to: updatedUserData.email,
+          subject: "Deposit Confirmed — 4xMeta",
+          html: depositSuccessMail({
+            userName:      updatedUserData.first_name || updatedUserData.telegram?.first_name || "User",
+            amount:        amountToCredit,
+            paymentMode:   "USDT-TRC20",  
+            transactionId: newUserTransaction.transaction_id,
+            date:          new Date(newUserTransaction.createdAt).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC",
+            walletBalance: updatedUserData.wallets.main,
+          }),
+        });
+      }
+      
 
       return res.status(200).json({
         status: "success",
@@ -422,6 +442,23 @@ const bep20CheckAndTransferPayment = async (req,res) => {
               }
             }
 
+            if (updatedUserData?.email) {
+              await resend.emails.send({
+                from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+                to: updatedUserData.email,
+                subject: "Deposit Confirmed — 4xMeta",
+                html: depositSuccessMail({
+                  userName:      updatedUserData.first_name || updatedUserData.telegram?.first_name || "User",
+                  amount:        amountToCredit,
+                  paymentMode:   "USDT-BEP20",   
+                  transactionId: newUserTransaction.transaction_id,
+                  date:          new Date(newUserTransaction.createdAt).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC",
+                  walletBalance: updatedUserData.wallets.main,
+                }),
+              });
+            }
+            
+
             //trasfer to company wallet logic here--
             return res.status(200).json({ 
                 status: 'success' ,
@@ -476,7 +513,7 @@ const withdrawFromMainWallet = async (req, res) => {
     const payment_mode = method.toUpperCase() // normalize: USDT-TRC20, USDT-BEP20
 
     // ---------------- USER CHECK ----------------
-    const user = await userModel.findById(req.user._id).select("wallets is_blocked");
+    const user = await userModel.findById(req.user._id).select("wallets is_blocked email first_name");
     if (!user) {
       return res.status(404).json({ errMsg: "User not found" });
     }
@@ -521,6 +558,27 @@ const withdrawFromMainWallet = async (req, res) => {
       { $inc: { "wallets.main": -amountToDeduct }},
       { new: true, select: "-password" }
     );
+
+    if (user.email) {  // user is already fetched above in the controller
+      // Fetch fresh email — the earlier user query only selects wallets & is_blocked
+      // so re-fetch or add email to the select:
+      // const user = await userModel.findById(req.user._id).select("wallets is_blocked email first_name");
+    
+      await resend.emails.send({
+        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        to: req.user.email, // req.user has full user from auth middleware
+        subject: "Withdrawal Request Submitted — 4xMeta",
+        html: withdrawalRequestMail({
+          userName:         req.user.first_name || req.user.telegram?.first_name || "User",
+          amount:           amount,
+          networkFee:       network_fee,
+          paymentMode:      payment_mode,
+          recipientAddress: recipient,
+          transactionId:    withdrawRequest.transaction_id,
+          date:             new Date(tx.createdAt).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC",
+        }),
+      });
+    }
 
     // ---------------- RETURN ----------------
     return res.status(200).json({
