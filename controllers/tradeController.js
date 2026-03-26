@@ -483,7 +483,7 @@ const rollOverTradeDistribution = async (rollover_id) => {
           swap: trade.swap,
           open_time: trade.open_time,
           close_time: trade.close_time,
-          manager_profit: investorProfit,
+          manager_profit: tradeProfit,
           investor_profit: investorProfit,
           rollover_id,
           take_profit:trade.take_profit,
