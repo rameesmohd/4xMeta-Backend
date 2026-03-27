@@ -1,33 +1,68 @@
 const botUsers = require("../models/botUsers");
+// const getAudienceQuery = (msg) => {
+//   const baseQuery = { is_active: true }; // ✅ Core filter
+
+//   switch (msg.audience) {
+//     case "all":
+//       return baseQuery;
+    
+//     case "single":
+//       return msg.singleUserId 
+//         ? { ...baseQuery, id: msg.singleUserId } 
+//         : { _id: null };
+    
+//     case "not_opened_webapp":
+//       return { ...baseQuery, is_opened_webapp: false };
+    
+//     case "not_invested":
+//       return { ...baseQuery, is_invested: false };
+    
+//     case "invested":
+//       return { ...baseQuery, is_invested: true };
+    
+//     case "not_joined_channel":
+//       return { ...baseQuery, is_joined_channel: false };
+
+//     case "not_claimed_bonus":
+//       return { ...baseQuery, is_claimed_bonus: false, is_invested: false };
+
+//     case "claimed_bonus":
+//       return { ...baseQuery, is_claimed_bonus: true, is_invested: false };
+
+//     default:
+//       return { _id: null };
+//   }
+// };
+
 const getAudienceQuery = (msg) => {
-  const baseQuery = { is_active: true }; // ✅ Core filter
+  const baseQuery = { is_active: true };
 
   switch (msg.audience) {
     case "all":
       return baseQuery;
-    
+
     case "single":
-      return msg.singleUserId 
-        ? { ...baseQuery, id: msg.singleUserId } 
+      return msg.singleUserId
+        ? { ...baseQuery, id: Number(msg.singleUserId) } // ← cast to Number to match schema
         : { _id: null };
-    
+
     case "not_opened_webapp":
       return { ...baseQuery, is_opened_webapp: false };
-    
+
     case "not_invested":
       return { ...baseQuery, is_invested: false };
-    
+
     case "invested":
       return { ...baseQuery, is_invested: true };
-    
+
     case "not_joined_channel":
       return { ...baseQuery, is_joined_channel: false };
 
     case "not_claimed_bonus":
-      return { ...baseQuery, is_claimed_bonus: false, is_invested: false };
+      return { ...baseQuery, is_claimed_bonus: false }; // ← removed is_invested: false
 
     case "claimed_bonus":
-      return { ...baseQuery, is_claimed_bonus: true, is_invested: false };
+      return { ...baseQuery, is_claimed_bonus: true };  // ← removed is_invested: false
 
     default:
       return { _id: null };
