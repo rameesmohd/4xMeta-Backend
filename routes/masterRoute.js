@@ -19,7 +19,8 @@ const {
         fetchBotUsers,
         fetchBotUsersStats,
         fetchHelpRequests,
-        changeHelpRequestStatus
+        changeHelpRequestStatus,
+        getVerifiedKYCUsers
     } =require('../controllers/master/masterController')
 const { fetchAddressBalance } = require('../controllers/user/paymentController')
 const {verifyToken} = require('../middlewares/masterAuth')
@@ -83,6 +84,8 @@ router.route('/kyc-requests')
     .get(getPendingKYCRequests)
     .patch(approveKycDocs)
     .post(approveKyc)
+
+router.get('/kyc-verified',          getVerifiedKYCUsers);
 
 router.post('/add-to-wallet',addToWallet)
 router.post('/send-email',sendEmail)

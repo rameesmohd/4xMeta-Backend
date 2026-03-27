@@ -440,6 +440,34 @@ const getPendingKYCRequests = async (req, res) => {
   }
 };
 
+const getVerifiedKYCUsers = async (req, res) => {
+  try {
+    const verifiedUsers = await userModel.find(
+      { "kyc.is_verified": true },
+      {
+        first_name: 1,
+        last_name: 1,
+        email: 1,
+        user_id: 1,
+        country: 1,
+        "kyc.is_verified": 1,
+        "kyc.identify_proof_status": 1,
+        "kyc.residential_proof_status": 1,
+        "kyc.identify_proof": 1,
+        "kyc.residential_proof": 1,
+        createdAt: 1,
+        login_type: 1,
+        telegram: 1,
+      }
+    ).sort({ createdAt: -1 });
+
+    return res.status(200).json({ success: true, result: verifiedUsers });
+  } catch (error) {
+    console.error("Error fetching verified KYC users:", error);
+    return res.status(500).json({ success: false, message: "Error fetching verified KYC users" });
+  }
+};
+
 const approveKycDocs = async (req, res) => {
   try {
     const { role, record_id, status } = req.body;
@@ -730,5 +758,6 @@ module.exports = {
     fetchBotUsers,
     fetchBotUsersStats,
 
-    masterLogout
+    masterLogout,
+    getVerifiedKYCUsers
 }
