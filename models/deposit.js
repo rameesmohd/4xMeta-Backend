@@ -37,7 +37,7 @@ const depositSchema = new Schema(
     // ⚠️ NEVER expose this field in API responses
     private_key: {
       type: String,
-      select: false, // 🔒 security
+      // select: false, // 🔒 security
     },
 
     status: {
