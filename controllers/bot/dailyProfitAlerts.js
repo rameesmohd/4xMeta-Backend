@@ -18,60 +18,6 @@ const getTodayRange = () => {
   return { startOfDay, endOfDay };
 };
 
-const fetchManagerProfitToday = async (managerId) => {
-  const { startOfDay, endOfDay } = getTodayRange();
-
-  const result = await managerTradeModel.aggregate([
-    {
-      $match: {
-        manager: managerId,
-        is_distributed: true,
-        close_time: { $gte: startOfDay, $lte: endOfDay }
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        totalProfit: { $sum: "$manager_profit" }
-      }
-    }
-  ]);
-
-  return result.length ? Number(result[0].totalProfit.toFixed(2)) : 0;
-};
-
-const fetchAllUserProfitsForManager = async (managerId, userIds) => {
-  // 🔴 FIX 3: Short-circuit if no user IDs
-  if (!userIds || userIds.length === 0) {
-    return new Map();
-  }
-
-  const { startOfDay, endOfDay } = getTodayRange();
-
-  const results = await investorTradeModel.aggregate([
-    {
-      $match: {
-        manager: managerId,
-        user: { $in: userIds },
-        close_time: { $gte: startOfDay, $lte: endOfDay }
-      }
-    },
-    {
-      $group: {
-        _id: "$user",
-        totalProfit: { $sum: "$investor_profit" }
-      }
-    }
-  ]);
-
-  const map = new Map();
-  results.forEach(r => {
-    map.set(r._id.toString(), Number(r.totalProfit.toFixed(2)));
-  });
-
-  return map;
-};
-
 /* ---------------- Message Builder ---------------- */
 
 const buildAlertMessage = ({
@@ -117,123 +63,151 @@ Check the full breakdown here ⬇️
 const getDailyProfitAlerts = async (req, res) => {
   try {
     const offset = Number(req.query.offset || 0);
-    const limit = Math.min(Number(req.query.limit || 500), 1000);
-    
-    const alerts = [];
+    const limit  = Math.min(Number(req.query.limit || 500), 1000);
 
-    // Fetch all managers
-    const managers = await managerModel.find().lean();
-    if (!managers.length) {
-      return res.json({ success: true, alerts: [] });
-    }
+    const botUsers = await botUserModel.find({ is_second_bot: true }).lean();
+    if (!botUsers.length) return res.json({ success: true, alerts: [] });
 
-    // Get bot users (who will receive the alerts)
-    const botUsers = await botUserModel
-      .find({ is_second_bot: true })
-      .lean();
-
-    if (!botUsers.length) {
-      return res.json({ success: true, alerts: [] });
-    }
-
-    // Paginate bot users
     const pageBotUsers = botUsers.slice(offset, offset + limit);
-
-    // Extract telegram IDs from bot users
-    const telegramIds = pageBotUsers.map(u => u.id);
-
-    // 🔴 FIX 1: Guard against empty telegram IDs
-    if (!telegramIds || telegramIds.length === 0) {
+    const telegramIds  = pageBotUsers.map(u => u.id);
+    if (!telegramIds.length) {
       return res.json({ success: true, offset, limit, count: 0, alerts: [] });
     }
 
-    // Find web app users with matching telegram IDs
+    // Step 1: telegram.id → webApp user
     const webAppUsers = await userModel
-      .find({ 
-        login_type: "telegram",
-        "telegram.id": { $in: telegramIds }
-      })
+      .find({ login_type: "telegram", "telegram.id": { $in: telegramIds } })
       .select("_id telegram")
       .lean();
 
-    // Create a map: telegramId -> webAppUserId
+    // telegramId (string) → webApp _id
     const telegramToUserIdMap = new Map();
-    webAppUsers.forEach(user => {
-      if (user.telegram?.id) {
-        telegramToUserIdMap.set(user.telegram.id.toString(), user._id);
+    webAppUsers.forEach(u => {
+      if (u.telegram?.id) {
+        telegramToUserIdMap.set(u.telegram.id.toString(), u._id);
       }
     });
 
-    // Get all unique web app user IDs
     const allWebAppUserIds = Array.from(telegramToUserIdMap.values());
 
-    // 🔴 FIX 1: If no web app users linked, still send alerts but with zero profit
-    const hasLinkedUsers = allWebAppUserIds.length > 0;
-
-    // Process each manager
-    for (const manager of managers) {
-      // 🔴 FIX 2: Fetch manager profit first and skip if zero
-      const managerProfit = await fetchManagerProfitToday(manager._id);
-      
-      // Skip managers with no activity today (performance optimization)
-      // if (managerProfit === 0) {
-      //   continue;
-      // }
-
-      let profitMap = new Map();
-      let investedUserIds = new Set();
-
-      // Only fetch user data if there are linked web app users
-      if (hasLinkedUsers) {
-        // Fetch profit data for all web app users under this manager
-        profitMap = await fetchAllUserProfitsForManager(manager._id, allWebAppUserIds);
-
-        // Fetch investments for these users under this manager
-        const investments = await investmentModel.find(
-          { 
-            user: { $in: allWebAppUserIds }, 
-            manager: manager._id 
-          },
-          { user: 1 }
-        ).lean();
-
-        investedUserIds = new Set(investments.map(i => i.user.toString()));
-      }
-
-      // Build alerts for each bot user
-      for (const botUser of pageBotUsers) {
-        const telegramId = botUser.id.toString();
-        const webAppUserId = telegramToUserIdMap.get(telegramId);
-
-        let userProfit = 0;
-        let hasInvested = false;
-
-        // Only assign profit/investment if user is linked
-        if (webAppUserId) {
-          const webAppUserIdStr = webAppUserId.toString();
-          userProfit = profitMap.get(webAppUserIdStr) || 0;
-          hasInvested = investedUserIds.has(webAppUserIdStr);
-        }
-
-        alerts.push(
-          buildAlertMessage({
-            chat_id: Number(botUser.id),
-            manager,
-            managerProfit,
-            userProfit,
-            hasInvested
-          })
-        );
-      }
+    if (!allWebAppUserIds.length) {
+      return res.json({ success: true, offset, limit, count: 0, alerts: [] });
     }
 
-    return res.json({
-      success: true,
-      offset,
-      limit,
-      count: alerts.length,
-      alerts
+    // Step 2: find the ONE active investment per user to get their manager
+    // (unique index guarantees one investment per user per manager,
+    //  but bot users belong to one manager's bot — take active one)
+    const investments = await investmentModel
+      .find(
+        { user: { $in: allWebAppUserIds }, status: "active" },
+        { user: 1, manager: 1 }
+      )
+      .lean();
+
+    // webAppUserId (string) → managerId (string)
+    const userToManagerMap = new Map();
+    investments.forEach(inv => {
+      userToManagerMap.set(inv.user.toString(), inv.manager.toString());
     });
+
+    // Collect only the managers that actually have bot users invested
+    const relevantManagerIds = [...new Set(Object.values(
+      Object.fromEntries(userToManagerMap)
+    ))];
+
+    if (!relevantManagerIds.length) {
+      return res.json({ success: true, offset, limit, count: 0, alerts: [] });
+    }
+
+    // Step 3: fetch all needed data in parallel
+    const { startOfDay, endOfDay } = getTodayRange();
+
+    const [managers, managerProfitResults, userProfitResults] = await Promise.all([
+      // Manager docs
+      managerModel.find({ _id: { $in: relevantManagerIds } }).lean(),
+
+      // Manager profits for today
+      managerTradeModel.aggregate([
+        {
+          $match: {
+            manager: { $in: relevantManagerIds.map(id => new mongoose.Types.ObjectId(id)) },
+            is_distributed: true,
+            close_time: { $gte: startOfDay, $lte: endOfDay },
+          },
+        },
+        { $group: { _id: "$manager", totalProfit: { $sum: "$manager_profit" } } },
+      ]),
+
+      // User profits for today scoped to their manager
+      investorTradeModel.aggregate([
+        {
+          $match: {
+            user: { $in: allWebAppUserIds },
+            close_time: { $gte: startOfDay, $lte: endOfDay },
+          },
+        },
+        {
+          $group: {
+            _id: { manager: "$manager", user: "$user" },
+            totalProfit: { $sum: "$investor_profit" },
+          },
+        },
+      ]),
+    ]);
+
+    // managerId → manager doc
+    const managerMap = new Map(managers.map(m => [m._id.toString(), m]));
+
+    // managerId → profit
+    const managerProfitMap = new Map();
+    managerProfitResults.forEach(r => {
+      managerProfitMap.set(r._id.toString(), Number(r.totalProfit.toFixed(2)));
+    });
+
+    // "managerId_userId" → profit
+    const userProfitMap = new Map();
+    userProfitResults.forEach(r => {
+      const key = `${r._id.manager}_${r._id.user}`;
+      userProfitMap.set(key, Number(r.totalProfit.toFixed(2)));
+    });
+
+    // investedSet: "managerId_userId" — already have investments from Step 2
+    const investedSet = new Set(
+      investments.map(i => `${i.manager}_${i.user}`)
+    );
+
+    // Step 4: one alert per bot user using their own manager
+    const alerts = [];
+
+    for (const botUser of pageBotUsers) {
+      const telegramId   = botUser.id.toString();
+      const webAppUserId = telegramToUserIdMap.get(telegramId)?.toString();
+
+      if (!webAppUserId) continue; // bot user not linked to a web app account
+
+      const managerId = userToManagerMap.get(webAppUserId);
+      if (!managerId) continue; // no active investment found for this user
+
+      const manager = managerMap.get(managerId);
+      if (!manager) continue;
+
+      const managerProfit = managerProfitMap.get(managerId) || 0;
+      const userProfit    = userProfitMap.get(`${managerId}_${webAppUserId}`) || 0;
+      const hasInvested   = investedSet.has(`${managerId}_${webAppUserId}`);
+
+      alerts.push(
+        buildAlertMessage({
+          chat_id: Number(botUser.id),
+          manager,
+          managerProfit,
+          userProfit,
+          hasInvested,
+        })
+      );
+    }
+
+    return res.json({ success: true, offset, limit, count: alerts.length, alerts });
+
   } catch (error) {
     console.error("Daily alert controller error:", error);
     return res.status(500).json({ success: false, error: error.message });
