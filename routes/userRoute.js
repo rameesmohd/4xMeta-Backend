@@ -13,7 +13,7 @@ const ticket = require('../controllers/user/ticketContoller')
 const { fetchCountryList } = require('../controllers/common/fetchCountryList')
 const { activity } = require('../controllers/common/activityController')
 
-const { upload } = require('../config/multer');
+const { upload ,withUpload } = require('../config/multer');
 const { default: rateLimit } = require('express-rate-limit');
 
 router.get("/ping",(req,res)=>{
@@ -122,8 +122,8 @@ router.get('/transactions/manager',manager.fetchManagerTransactions)
 router.get("/chart",chart.getUserGrowthChart)
 
 router.post('/kyc/otp',user.handleEmailVerificationOtp)
-router.post('/kyc/identity',    upload.array("identityProof", 2),    user.handleKycProofSubmit("identity"))
-router.post('/kyc/residential', upload.array("residentialProof", 2), user.handleKycProofSubmit("residential"))
+router.post('/kyc/identity',    withUpload(upload.array("identityProof", 2), user.handleKycProofSubmit("identity")))
+router.post('/kyc/residential',  withUpload(upload.array("residentialProof", 2), user.handleKycProofSubmit("residential")))
 router.route("/rebate")
       .get(user.fetchRebateTx)
       .post(user.trasferRebateToWallet)

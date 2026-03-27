@@ -407,22 +407,42 @@ const handleKycProofSubmit = (proofType) => async (req, res) => {
 
   try {
     if (!localFiles.length) {
-      return res.status(400).json({ success: false, message: "No files uploaded" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "No files were received. Please select both sides of your document and try again." 
+      });
     }
 
-    // Upload all files, then clean up locals regardless of outcome
+    if (localFiles.length < 2) {
+      cleanupFiles(localFiles);
+      return res.status(400).json({ 
+        success: false, 
+        message: "Both sides of the document are required. Please upload the front and back." 
+      });
+    }
+
     let fileUrls;
     try {
       fileUrls = await Promise.all(
         localFiles.map(file => uploadToCloudinary(file.path))
       );
+    } catch (uploadError) {
+      console.error("Cloudinary upload error:", uploadError);
+      // Specific message for upload failures
+      return res.status(502).json({ 
+        success: false, 
+        message: "Document upload failed. Please check your file format (JPG, PNG, PDF) and try again." 
+      });
     } finally {
-      cleanupFiles(localFiles); // always runs, success or failure
+      cleanupFiles(localFiles); // moved inside inner try/finally so it always runs
     }
 
     const currentUser = await UserModel.findById(req.user._id);
     if (!currentUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Session expired. Please log in again." 
+      });
     }
 
     const KYC_MAX_STEP = 4;
@@ -434,7 +454,6 @@ const handleKycProofSubmit = (proofType) => async (req, res) => {
     };
 
     const fields = fieldMap[proofType];
-    // No else needed — proofType is controlled by the route, not user input
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       req.user._id,
@@ -448,23 +467,25 @@ const handleKycProofSubmit = (proofType) => async (req, res) => {
       { new: true }
     );
 
-    if (updatedUser) {
-      await sendKycRequestedAlert({
-        user: {
-          first_name: updatedUser.telegram.first_name,
-          last_name:  updatedUser.telegram.last_name,
-          username:   updatedUser.telegram.username,
-          telegramId: updatedUser.telegram.id,
-        },
-        kycLevel: updatedUser.kyc.step,
-      });
-    }
+    // Non-blocking — don't let alert failure fail the whole request
+    sendKycRequestedAlert({
+      user: {
+        first_name: updatedUser.telegram.first_name,
+        last_name:  updatedUser.telegram.last_name,
+        username:   updatedUser.telegram.username,
+        telegramId: updatedUser.telegram.id,
+      },
+      kycLevel: updatedUser.kyc.step,
+    }).catch(err => console.error("KYC alert failed (non-critical):", err));
 
     res.status(200).json({ success: true, result: updatedUser });
 
   } catch (error) {
     console.error("KYC submit error:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: "Something went wrong on our end. Please try again in a moment." 
+    });
   }
 };
 
