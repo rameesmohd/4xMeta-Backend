@@ -99,6 +99,7 @@ const managerTradeModel = require("../../models/managerTrades");
 const investorTradeModel = require("../../models/investmentTrades");
 const managerModel = require("../../models/manager");
 const investmentModel = require("../../models/investment");
+const { default: mongoose } = require("mongoose");
 
 /* ---------------- Utils ---------------- */
 
