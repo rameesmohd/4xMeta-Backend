@@ -68,6 +68,7 @@ router.get("/activity",activity)
 
 router.get('/user/manager',manager.fetchManager)
 router.get("/account-history/manager",manager.fetchAccountData)
+router.get("/trade/calendar", manager.getTradeCalendar)
 
 router.get("/chart/daily", chart.getDailyChart);
 router.get("/chart/weekly", chart.getWeeklyChart);

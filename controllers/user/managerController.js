@@ -206,9 +206,106 @@ const fetchManagerTransactions = async (req, res) => {
   }
 };
 
+const getTradeCalendar = async (req, res) => {
+  try {
+    const { manager_id, start, end } = req.query;
+ 
+    if (!manager_id) {
+      return res.status(400).json({ errMsg: "manager_id is required" });
+    }
+ 
+    const startDate = start ? new Date(start) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const endDate   = end   ? new Date(new Date(end).setHours(23, 59, 59, 999))
+                            : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+ 
+    // Fetch distributed trades for this manager within the date range
+    const trades = await managerTradeModel
+      .find({
+        manager:        manager_id,
+        is_distributed: true,
+        close_time:     { $gte: startDate, $lte: endDate },
+      })
+      .sort({ close_time: 1 })
+      .lean();
+ 
+    // ── Compute monthly statistics ──────────────────────────────────────────
+    const profits     = trades.map(t => Number(t.manager_profit) || 0);
+    const totalPnl    = parseFloat(profits.reduce((a, b) => a + b, 0).toFixed(2));
+    const winning     = profits.filter(p => p > 0);
+    const losing      = profits.filter(p => p < 0);
+    const longTrades  = trades.filter(t => t.type === "buy").length;
+    const shortTrades = trades.filter(t => t.type === "sell").length;
+ 
+    const avgProfit   = winning.length
+      ? parseFloat((winning.reduce((a, b) => a + b, 0) / winning.length).toFixed(2))
+      : 0;
+ 
+    const avgLoss     = losing.length
+      ? parseFloat((Math.abs(losing.reduce((a, b) => a + b, 0)) / losing.length).toFixed(2))
+      : 0;
+ 
+    const profitFactor = avgLoss > 0
+      ? parseFloat((avgProfit / avgLoss).toFixed(2))
+      : null;
+ 
+    // Average holding time in days
+    const holdMinutes = trades.map(t => {
+      const open  = new Date(t.open_time).getTime();
+      const close = new Date(t.close_time).getTime();
+      return (close - open) / 60000; // minutes
+    });
+    const avgHoldDays = holdMinutes.length
+      ? parseFloat((holdMinutes.reduce((a, b) => a + b, 0) / holdMinutes.length / 1440).toFixed(2))
+      : 0;
+ 
+    const winRate = trades.length > 0
+      ? parseFloat(((winning.length / trades.length) * 100).toFixed(2))
+      : 0;
+ 
+    // Max simultaneously open trades (approximate from overlapping open/close times)
+    let maxOpen = 0;
+    const events = [];
+    for (const t of trades) {
+      events.push({ time: new Date(t.open_time).getTime(),  type: 1  });
+      events.push({ time: new Date(t.close_time).getTime(), type: -1 });
+    }
+    events.sort((a, b) => a.time - b.time);
+    let open = 0;
+    for (const e of events) {
+      open += e.type;
+      if (open > maxOpen) maxOpen = open;
+    }
+ 
+    const stats = {
+      totalPnl,
+      totalTrades:    trades.length,
+      winRate,
+      longTrades,
+      shortTrades,
+      winningTrades:  winning.length,
+      losingTrades:   losing.length,
+      grossPnl:       totalPnl,
+      avgProfit,
+      avgLoss,
+      profitFactor,
+      avgHoldDays,
+      maxOpenTrade:   maxOpen,
+      sharpeRatio:    null, // requires daily returns — extend if needed
+      growth:         null, // requires equity context
+    };
+ 
+    return res.status(200).json({ trades, stats });
+ 
+  } catch (error) {
+    console.error("Trade calendar error:", error);
+    return res.status(500).json({ errMsg: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
     fetchManager,
     fetchManagerTele,
     fetchAccountData,
-    fetchManagerTransactions
+    fetchManagerTransactions,
+    getTradeCalendar
 }
