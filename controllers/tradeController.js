@@ -583,22 +583,17 @@ const rollOverTradeDistribution = async (rollover_id) => {
     
     for (const [managerId, accumulated] of managerAccumulated.entries()) {
       const managerObjectId = new mongoose.Types.ObjectId(managerId);
-      // ✅ Use aggregation to sum on database side (handles millions of docs)
-      const result = await managerGrowthChart.aggregate([
-        { 
-          $match: { manager: managerObjectId } 
-        },
-        { 
-          $group: {
-            _id: null,
-            totalCompound: { $sum: "$value" }
-          }
-        }
-      ]).session(session);
 
-      const lifetimeCompound = result.length > 0 
-        ? toTwoDecimals(Number(result[0].totalCompound) || 0)
-        : 0;
+      const chartDocs = await managerGrowthChart
+        .find({ manager: managerObjectId })
+        .sort({ date: 1 })
+        .session(session);
+
+      let compoundedFactor = 1;
+      for (const doc of chartDocs) {
+        compoundedFactor *= (1 + (Number(doc.value) || 0) / 100);
+      }
+      const lifetimeCompound = toTwoDecimals((compoundedFactor - 1) * 100);
         
       bulkManagerUpdates.push({
         updateOne: {

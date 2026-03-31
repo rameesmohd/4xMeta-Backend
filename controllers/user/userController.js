@@ -326,7 +326,8 @@ const handleEmailVerificationOtp = async (req, res) => {
 
     if (action === "send") {
       const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
+      // console.log(randomOtp)
+      
       await OtpModel.deleteMany({ user: user._id }); 
 
       await OtpModel.create({
