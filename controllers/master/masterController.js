@@ -603,8 +603,8 @@ const addToWallet = async (req, res) => {
         const { email, amount, comment,type,payment_mode } = req.body;
         console.log(req.body);
 
-        if(!email || !amount || !comment || !type || !payment_mode){
-            return res.status(400).json({ errMsg: "Invalid inputs!", error });
+        if(!email || !amount || !type || !payment_mode){
+            return res.status(400).json({ errMsg: "Invalid inputs!" });
         }
         
         // Find the user within the transaction
@@ -620,9 +620,8 @@ const addToWallet = async (req, res) => {
             user: user._id,
             type,
             payment_mode,
-            status: 'approved',
+            status: 'completed',
             amount: amount,
-            transaction_type: 'deposits',
             description: comment || '',
         });
 
@@ -631,7 +630,7 @@ const addToWallet = async (req, res) => {
         // Update the user's wallet balance
         const walletUpdate = await userModel.findOneAndUpdate(
             { _id: user._id },
-            { $inc: { 'my_wallets.main_wallet': amount } },
+            { $inc: { 'wallets.main': amount } },
             { session }
         );
 
@@ -649,7 +648,7 @@ const addToWallet = async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         console.error("Error adding funds:", error);
-        return res.status(500).json({ errMsg: "Error adding funds", error });
+        return res.status(500).json({ errMsg: "Error adding funds" });
     }
 };
 
