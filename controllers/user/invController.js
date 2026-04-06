@@ -22,7 +22,7 @@ const makeInvestment = async (req, res) => {
 
   try {
     await session.withTransaction(async () => {
-      const { managerId, amount : rawAmt, ref } = req.body;
+      const { managerId, amount : rawAmt, ref , topup} = req.body;
       const parsed = Number(rawAmt);
       const amount = Math.floor(parsed * 100) / 100;
       const userId = req.user._id;
@@ -44,11 +44,14 @@ const makeInvestment = async (req, res) => {
       if (amount > user.wallets.main)
         throw new Error("Insufficient wallet balance");
 
-      // Validate minimum investment
-      if (amount < manager.min_initial_investment)
-        throw new Error(
-          `Minimum investment required is $${manager.min_initial_investment}`
-        );
+      // ✅ Correct minimum validation with correct error message
+      if (topup) {
+        if (amount < manager.min_top_up)
+          throw new Error(`Minimum top-up amount is $${manager.min_top_up}`);
+      } else {
+        if (amount < manager.min_initial_investment)
+          throw new Error(`Minimum investment required is $${manager.min_initial_investment}`);
+      }
 
       // Deduct from wallet
       await UserModel.findByIdAndUpdate(
@@ -909,9 +912,6 @@ const checkPendingDeposit = async (req, res) => {
 // const userTransactionModel = require('../models/userTx');
 // const managerModel = require('../models/manager');
 // const { default: mongoose } = require('mongoose');
-
-
-
 /**
  * Close an investment and credit the appropriate amount to the user's wallet.
  *
