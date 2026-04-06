@@ -26,7 +26,7 @@ const investmentTransactionSchema = new Schema(
     // manager_fee → periodic fee deducted
     type: {
       type: String,
-      enum: ["deposit", "withdrawal", "manager_fee"],
+      enum: ["deposit", "withdrawal", "manager_fee", "refund"],
       required: true,
     },
 

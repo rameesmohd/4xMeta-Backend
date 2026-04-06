@@ -124,18 +124,20 @@ router.get("/chart",chart.getUserGrowthChart)
 
 router.post('/kyc/otp',user.handleEmailVerificationOtp)
 router.post('/kyc/identity',    withUpload(upload.array("identityProof", 2), user.handleKycProofSubmit("identity")))
-router.post('/kyc/residential',  withUpload(upload.array("residentialProof", 2), user.handleKycProofSubmit("residential")))
+router.post('/kyc/residential', withUpload(upload.array("residentialProof", 2), user.handleKycProofSubmit("residential")))
+
 router.route("/rebate")
       .get(user.fetchRebateTx)
       .post(user.trasferRebateToWallet)
 
 router.get('/investments',investment.fetchInvestments)
 
+router.post("/investment/close", investment.closeInvestment)
 router.get('/investment/trades',investment.fetchInvestmentTrades)
 router.get('/investment/transactions',investment.fetchInvestmentTransactions)
 router.get('/investment',investment.fetchInvById)
-router.get('/pending-deposit',investment.checkPendingDeposit)
 
+router.get('/pending-deposit',investment.checkPendingDeposit)
 
 router.route('/ticket')
 .post(upload.array('upload',5),ticket.submitTicket)

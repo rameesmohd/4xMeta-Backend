@@ -82,8 +82,7 @@ const investmentSchema = new Schema(
 
 // One investment per user per manager
 investmentSchema.index(
-  { user: 1, manager: 1 },
-  { unique: true }
+  { user: 1, manager: 1 }
 );
 
 // User dashboard

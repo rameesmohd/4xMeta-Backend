@@ -1,4 +1,4 @@
-const investmentModel = require('../../models/investment');
+const InvestmentModel = require('../../models/investment');
 const ManagerModel = require('../../models/manager');
 const UserModel = require('../../models/user')
 const { default: mongoose } = require('mongoose');
@@ -11,6 +11,11 @@ const { fetchAndUseLatestRollover } = require("../rolloverController");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const { investmentMail } = require("../../assets/html/transactional")
+const toTwoDecimals = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.trunc(n * 100) / 100;
+};
 
 const makeInvestment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -53,10 +58,10 @@ const makeInvestment = async (req, res) => {
       );
 
       // Generate investment ID
-      const invCount = await investmentModel.countDocuments().session(session);
+      const invCount = await InvestmentModel.countDocuments().session(session);
 
       //Check already existed
-      let investment = await investmentModel.findOne({user :user._id ,manager : manager._id })
+      let investment = await InvestmentModel.findOne({user :user._id ,manager : manager._id ,status: "active" }).session(session)
       
       if (user?.login_type === "telegram") {
         await BotUserModel.findOneAndUpdate(
@@ -74,7 +79,7 @@ const makeInvestment = async (req, res) => {
             inviter = await UserModel.findById(user.referral.referred_by).session(session);
           }
           // Create Investment Entry
-          const [newInvestment] = await investmentModel.create(
+          const [newInvestment] = await InvestmentModel.create(
             [
               {
                 inv_id: 21234 + invCount,
@@ -232,10 +237,10 @@ const makeBonusInvestment = async (req, res) => {
       if (!user || !manager) throw new Error("User or manager not found");
 
       // Generate investment ID
-      const invCount = await investmentModel.countDocuments().session(session);
+      const invCount = await InvestmentModel.countDocuments().session(session);
 
       //Check already existed
-      let investment = await investmentModel.findOne({user :user._id ,manager : manager._id })
+      let investment = await InvestmentModel.findOne({user :user._id ,manager : manager._id })
       
       await UserModel.findOneAndUpdate(
         { _id: user._id },
@@ -259,7 +264,7 @@ const makeBonusInvestment = async (req, res) => {
           inviter = await UserModel.findById(user.referral.referred_by).session(session);
         }
         // Create Investment Entry
-        const [newInvestment] = await investmentModel.create(
+        const [newInvestment] = await InvestmentModel.create(
           [
             {
               inv_id: 21234 + invCount,
@@ -363,7 +368,7 @@ const fetchInvestment=async(req,res)=>{
     const user = req.user;
     const userId = req.user._id
     const managerId = req.query.manager
-    const investment = await investmentModel.findOne({
+    const investment = await InvestmentModel.findOne({
       user:userId,
       manager:managerId
     })
@@ -412,13 +417,6 @@ const fetchInvTransactions = async (req, res) => {
   }
 };
 
-// safe rounding for finance (2 decimals)
-const toTwoDecimals = (v) => {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return 0;
-  return Math.trunc(n * 100) / 100;
-};
-
 const getWithdrawSummary= async(req,res)=> {
   try {
   const {id : investmentId } = req.query
@@ -429,7 +427,7 @@ const getWithdrawSummary= async(req,res)=> {
     });
   }
 
-  const investment = await investmentModel
+  const investment = await InvestmentModel
     .findById(investmentId)
     .lean();
 
@@ -651,7 +649,7 @@ const handleInvestmentWithdrawal = async (req, res) => {
     if (amount < 10)
       return res.status(400).json({ success : false, errMsg: "Min withdrawal is $10." });
 
-    const investment = await investmentModel.findById(investmentId);
+    const investment = await InvestmentModel.findById(investmentId);
     if (!investment)
       return res.status(400).json({ success : false, errMsg: "Investment not found." });
     
@@ -701,7 +699,7 @@ const handleInvestmentWithdrawal = async (req, res) => {
 
       await tx.save();
 
-      await investmentModel.findByIdAndUpdate(investment._id, {
+      await InvestmentModel.findByIdAndUpdate(investment._id, {
         $inc: {
           total_withdrawal: amount,
           total_equity: -amount,
@@ -758,7 +756,7 @@ const fetchInvestments=async(req,res)=>{
   try {
     const user = req.user;
     const userId = req.user._id
-    const investment = await investmentModel.find({ user: userId }).populate({
+    const investment = await InvestmentModel.find({ user: userId }).populate({
       path: "manager",
       select: "img_url ",
     });
@@ -845,7 +843,7 @@ const fetchInvById=async(req,res)=>{
     const user = req.user
     const userId = req.user._id
     const invId = req.query.id
-    const investment = await investmentModel.findOne({
+    const investment = await InvestmentModel.findOne({
       _id : invId,
       user:userId,
     }).populate('manager')
@@ -905,8 +903,287 @@ const checkPendingDeposit = async (req, res) => {
   }
 };
 
+// const InvestmentModel = require('../models/investment');
+// const UserModel = require('../models/user');
+// const investmentTransactionModel = require('../models/investmentTx');
+// const userTransactionModel = require('../models/userTx');
+// const managerModel = require('../models/manager');
+// const { default: mongoose } = require('mongoose');
+
+
+
+/**
+ * Close an investment and credit the appropriate amount to the user's wallet.
+ *
+ * RULES:
+ *  A) Any deposit still within its liquidity period → principal only (profit on
+ *     that slice is forfeited / stays with the manager).
+ *  B) If some profit has already been withdrawn (net_profit already paid out),
+ *     that amount is deducted from the principal being returned.
+ *  C) Deposits whose liquidity period has fully elapsed → principal + settled
+ *     profit returned, EXCLUDING current_interval_profit (unsettled interval).
+ *  D) current_interval_profit is ALWAYS forfeited on close (interval not settled).
+ *  E) performance_fee_projected is also forfeited (would have been deducted at settlement).
+ */
+const closeInvestment = async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+
+      /* ── 0. Parse & validate ─────────────────────────────────── */
+      const { investmentId } = req.body;
+      const userId = req.user._id;
+
+      if (!mongoose.Types.ObjectId.isValid(investmentId)) {
+        return res.status(400).json({ success: false, errMsg: 'Invalid investmentId.' });
+      }
+
+      const investment = await InvestmentModel
+        .findOne({ _id: investmentId, user: userId })
+        .session(session);
+
+      if (!investment) {
+        return res.status(404).json({ success: false, errMsg: 'Investment not found.' });
+      }
+
+      if (investment.status === 'closed') {
+        return res.status(400).json({ success: false, errMsg: 'Investment is already closed.' });
+      }
+
+      const user = await UserModel.findById(userId).session(session);
+      if (!user) {
+        return res.status(404).json({ success: false, errMsg: 'User not found.' });
+      }
+
+      /* ── 1. Snapshot key figures ─────────────────────────────── */
+      const now = new Date();
+
+      const totalEquity            = toTwoDecimals(investment.total_equity            || 0);
+      const currentIntervalProfit  = toTwoDecimals(investment.current_interval_profit  || 0); // forfeited
+      const perfFeeProjected       = toTwoDecimals(investment.performance_fee_projected || 0); // forfeited
+      const netProfitAlreadyPaid   = toTwoDecimals(investment.net_profit               || 0); // profit already in wallet
+      const deposits               = Array.isArray(investment.deposits) ? investment.deposits : [];
+
+      /* ── 2. Partition deposits: locked vs unlocked ───────────── */
+      let lockedPrincipal   = 0;
+      let unlockedPrincipal = 0;
+
+      for (const d of deposits) {
+        const amt = Number(d.amount) || 0;
+
+        // Bonus deposits are always locked (non-refundable)
+        if (d.kind === 'bonus') continue;
+
+        const isLocked = (() => {
+          // Prefer explicit unlocked_at stored on the deposit
+          if (d.unlocked_at) return new Date(d.unlocked_at) > now;
+
+          // Fall back to lock_duration from deposit or investment level
+          const lockDays = Number(d.lock_duration ?? investment.trading_liquidity_period ?? 0);
+          if (!lockDays) return false;
+
+          const depositedAt = new Date(d.deposited_at || d.createdAt);
+          if (isNaN(depositedAt.getTime())) return false;
+
+          const unlock = new Date(depositedAt);
+          unlock.setDate(unlock.getDate() + lockDays);
+          return unlock > now;
+        })();
+
+        if (isLocked) {
+          lockedPrincipal += amt;
+        } else {
+          unlockedPrincipal += amt;
+        }
+      }
+
+      lockedPrincipal   = toTwoDecimals(lockedPrincipal);
+      unlockedPrincipal = toTwoDecimals(unlockedPrincipal);
+
+      /* ── 3. Calculate what gets credited to the wallet ───────── */
+
+      /**
+       * total_equity already reflects:
+       *   principal + settled profits − settled fees − previous withdrawals
+       *
+       * We need to strip out the unsettled current-interval profit because
+       * that slice is forfeited on early close.
+       *
+       * equityExcludingCurrentInterval = the "settled" pool available.
+       */
+      const equityExcludingCurrentInterval = toTwoDecimals(
+        totalEquity - currentIntervalProfit - perfFeeProjected
+      );
+
+      /**
+       * LOCKED slice:
+       *   Profit on locked deposits is forfeited.
+       *   We return the raw principal only.
+       *   But if the investor has already withdrawn more profit than they earned
+       *   on unlocked deposits, that over-withdrawal is recovered from principal.
+       *
+       * UNLOCKED slice:
+       *   Full settled equity attributable to unlocked deposits is returned.
+       *   equityExcludingCurrentInterval covers both principal and settled profit
+       *   for unlocked deposits.
+       */
+
+      // Settled equity attributable to unlocked principal
+      // (everything in the settled pool minus the locked principal portion)
+      const unlockedSettledEquity = toTwoDecimals(
+        Math.max(0, equityExcludingCurrentInterval - lockedPrincipal)
+      );
+
+      // For locked deposits: only return principal; forgo any profit on them.
+      // Cap at what's actually left in equity so we never return more than exists.
+      const lockedRefund = toTwoDecimals(
+        Math.min(lockedPrincipal, equityExcludingCurrentInterval)
+      );
+
+      /**
+       * net_profit already paid out must be reconciled:
+       *   If the investor withdrew profits that were derived from principal,
+       *   deduct those from the principal refund.
+       *
+       *   Estimated settled profit in unlocked equity:
+       *     settledProfitInPool = unlockedSettledEquity - unlockedPrincipal
+       *
+       *   Over-withdrawn profit = max(0, netProfitAlreadyPaid - settledProfitInPool)
+       *   This over-withdrawn amount is recovered from lockedRefund first, then
+       *   from unlockedSettledEquity.
+       */
+      const settledProfitInPool = toTwoDecimals(
+        Math.max(0, unlockedSettledEquity - unlockedPrincipal)
+      );
+
+      const overWithdrawnProfit = toTwoDecimals(
+        Math.max(0, netProfitAlreadyPaid - settledProfitInPool)
+      );
+
+      // Final credit = unlocked settled equity + locked principal refund − over-withdrawals
+      let creditToWallet = toTwoDecimals(
+        unlockedSettledEquity + lockedRefund - overWithdrawnProfit
+      );
+
+      // Safety floor
+      if (creditToWallet < 0) creditToWallet = 0;
+
+      /* ── 4. Build a human-readable closing summary ───────────── */
+      const closingSummary = {
+        totalEquityBeforeClose    : totalEquity,
+        currentIntervalForfeited  : currentIntervalProfit,
+        perfFeeProjectedForfeited : perfFeeProjected,
+        lockedPrincipal,
+        lockedRefund,
+        unlockedPrincipal,
+        unlockedSettledEquity,
+        netProfitAlreadyPaid,
+        overWithdrawnProfit,
+        creditToWallet,
+      };
+
+      console.log('📋 Closing summary:', closingSummary);
+
+      /* ── 5. Credit wallet ────────────────────────────────────── */
+      await UserModel.findByIdAndUpdate(
+        userId,
+        { $inc: { 'wallets.main': creditToWallet } },
+        { session }
+      );
+
+      /* ── 6. Mark investment closed & zero out equity ─────────── */
+      await InvestmentModel.findByIdAndUpdate(
+        investment._id,
+        {
+          $set: {
+            status                          : 'closed',
+            total_equity                    : 0,
+            current_interval_profit         : 0,
+            current_interval_profit_equity  : 0,
+            performance_fee_projected       : 0,
+          },
+          $inc: {
+            total_withdrawal: creditToWallet,
+          },
+        },
+        { session }
+      );
+
+      /* ── 7. Decrement manager totals ─────────────────────────── */
+      await ManagerModel.findByIdAndUpdate(
+        investment.manager,
+        {
+          $inc: {
+            total_funds    : -creditToWallet,
+            total_investors: -1,
+          },
+        },
+        { session }
+      );
+
+      /* ── 8. Investment transaction record (closure) ──────────── */
+      const fromInvestment = `INV_${investment.inv_id}`;
+      const toWallet       = `WALL_${user.wallets?.main_id || 'UNKNOWN'}`;
+
+      await InvestmentTransaction.create(
+        [
+          {
+            user      : userId,
+            investment: investment._id,
+            manager   : investment.manager,
+            type      : 'withdrawal',
+            status    : 'success',
+            amount    : creditToWallet,
+            from      : fromInvestment,
+            to        : toWallet,
+            comment   : `Investment closed. Forfeited: interval_profit=${currentIntervalProfit}, projected_fee=${perfFeeProjected}, over_withdrawn=${overWithdrawnProfit}`,
+          },
+        ],
+        { session }
+      );
+
+      /* ── 9. User wallet transaction record ───────────────────── */
+      await UserTransaction.create(
+        [
+          {
+            user                : userId,
+            investment          : investment._id,
+            type                : 'transfer',
+            status              : 'completed',
+            amount              : creditToWallet,
+            from                : fromInvestment,
+            to                  : toWallet,
+            description         : `Investment ${investment.inv_id} closed`,
+            transaction_type    : 'investment_transactions',
+            createdAt           : new Date(),
+          },
+        ],
+        { session }
+      );
+
+      /* ── 10. Respond ─────────────────────────────────────────── */
+      return res.status(200).json({
+        success : true,
+        msg     : 'Investment closed successfully.',
+        summary : closingSummary,
+      });
+    });
+
+  } catch (error) {
+    console.error('closeInvestment error:', error);
+    return res.status(500).json({
+      success : false,
+      errMsg  : error.message || 'Server error.',
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports={
     makeInvestment,
+    closeInvestment,
     fetchInvestment,
     fetchInvTransactions,
 

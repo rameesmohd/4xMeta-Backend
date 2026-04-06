@@ -38,11 +38,58 @@ const approveDepositTransaction = async (transactionId, rollover_id) => {
           throw new Error("Transaction not found or already processed");
         }
 
-        // Load investment (must exist)
-        const investment = await investmentModel.findById(transaction.investment).session(session);
-        if (!investment) throw new Error("Investment not found");
+        // Load investment
+        const investment = await investmentModel
+          .findById(transaction.investment)
+          .session(session);
 
-        // Prepare deposit entry with truncation
+        /* ── Investment closed or missing → refund to wallet ── */
+        if (!investment || investment.status === "closed") {
+          const depositAmount = toTwoDecimals(transaction.amount || 0);
+
+          // Mark transaction as refunded instead of success
+          await investmentTransactionModel.findByIdAndUpdate(
+            transaction._id,
+            {
+              status:  "refunded",
+              comment: investment
+                ? `Investment closed before rollover. Amount refunded to wallet.`
+                : `Investment not found. Amount refunded to wallet.`,
+            },
+            { session }
+          );
+
+          // Credit back to user wallet
+          await userModel.findByIdAndUpdate(
+            transaction.user,
+            { $inc: { "wallets.main": depositAmount } },
+            { session }
+          );
+
+          // Create a user transaction record for the refund
+          await userTransactionModel.create(
+            [
+              {
+                user:             transaction.user,
+                investment:       transaction.investment,
+                type:             "transfer",
+                status:           "completed",
+                amount:           depositAmount,
+                from:             `INV_${investment?.inv_id || transaction.investment}`,
+                to:               `WALL_REFUND`,
+                description:      `Deposit refunded — investment was closed before rollover`,
+                transaction_type: "investment_transactions",
+                createdAt:        new Date(),
+              },
+            ],
+            { session }
+          );
+
+          console.log(`↩ Deposit ${transaction._id} refunded $${depositAmount} to user ${transaction.user} — investment closed.`);
+          return; // done, no further processing
+        }
+
+        /* ── Normal flow: investment is active ── */
         const depositAmount = toTwoDecimals(transaction.amount || 0);
         let depositObj = {};
 
