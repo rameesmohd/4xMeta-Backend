@@ -2,7 +2,7 @@ const {TronWeb}  = require('tronweb');
 const depositsModel = require('../../models/deposit');
 const userTransactionModel = require('../../models/userTx')
 const userModel = require('../../models/user')
-const {sendUserDepositAlert} =require("../../controllers/bot/botAlerts")
+const {sendUserDepositAlert,sendUserWithdrawalAlert } =require("../../controllers/bot/botAlerts")
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const { depositSuccessMail,withdrawalRequestMail } = require("../../assets/html/transactional")
@@ -425,21 +425,19 @@ const bep20CheckAndTransferPayment = async (req,res) => {
               { new: true, select: '-password' }
             );
 
-             if(updatedUserData){
-              if(updatedUserData.login_type==="telegram"){
-                sendUserDepositAlert({
-                  user : {
-                    first_name: updatedUserData?.telegram.first_name,
-                    last_name: updatedUserData?.telegram.last_name,
-                    username: updatedUserData?.telegram.username,
-                  telegramId: updatedUserData?.telegram.id,
+            if (updatedUserData) {
+              sendUserDepositAlert({
+                user: {
+                  first_name: updatedUserData?.telegram?.first_name || updatedUserData?.first_name,
+                  last_name:  updatedUserData?.telegram?.last_name  || updatedUserData?.last_name,
+                  username:   updatedUserData?.telegram?.username   || updatedUserData?.email,
+                  telegramId: updatedUserData?.telegram?.id         || updatedUserData?.user_id,
                 },
-                amount : amountToCredit,
+                amount: amountToCredit,
                 currency: "USDT",
-                txid : newUserTransaction.transaction_id,
-                createdAt: newUserTransaction.createdAt
-              })
-              }
+                txid: newUserTransaction.transaction_id,
+                createdAt: newUserTransaction.createdAt,
+              });
             }
 
             if (updatedUserData?.email) {
@@ -577,6 +575,22 @@ const withdrawFromMainWallet = async (req, res) => {
           transactionId:    withdrawRequest.transaction_id,
           date:             new Date(tx.createdAt).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC",
         }),
+      });
+    }
+    if (updatedUser) {
+      sendUserWithdrawalAlert({
+        user: {
+          first_name: updatedUser?.telegram?.first_name || updatedUser?.first_name,
+          last_name:  updatedUser?.telegram?.last_name  || updatedUser?.last_name,
+          username:   updatedUser?.telegram?.username   || updatedUser?.email,
+          telegramId: updatedUser?.telegram?.id         || updatedUser?.user_id,
+        },
+        amount,
+        currency: "USDT",
+        paymentMethod: payment_mode,
+        txid: withdrawRequest.transaction_id,
+        recipientAddress: recipient,
+        createdAt: tx.createdAt,
       });
     }
 

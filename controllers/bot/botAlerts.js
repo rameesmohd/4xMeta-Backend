@@ -107,9 +107,51 @@ ${escapeMarkdown(txid)}
   await sendTelegramAlert(caption);
 };
 
+const sendUserWithdrawalAlert = async ({
+  user = {},
+  amount = 0,
+  currency = "USDT",
+  paymentMethod = "-",
+  txid = "-",
+  recipientAddress = "-",
+  createdAt = new Date()
+} = {}) => {
+  const fullName =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "-";
+
+  const caption = `
+🏧 *WITHDRAWAL REQUEST*
+────────────────────
+👤 *Client:* ${escapeMarkdown(fullName)}
+🔗 *Username:* ${user.username ? `@${escapeMarkdown(user.username)}` : "—"}
+🆔 *Telegram ID:* ${escapeMarkdown(user.telegramId || "—")}
+
+💵 *Amount:* ${escapeMarkdown(`${Number(amount).toFixed(2)} ${currency}`)}
+💳 *Method:* ${escapeMarkdown(paymentMethod)}
+📬 *Recipient:* ${escapeMarkdown(recipientAddress)}
+
+🧾 *Transaction ID:*
+${escapeMarkdown(txid)}
+
+📅 *Date:* ${escapeMarkdown(
+  new Date(createdAt).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+)}
+────────────────────
+`;
+
+  await sendTelegramAlert(caption);
+};
+
 
 module.exports = {
   sendNewBotUserAlert,
   sendKycRequestedAlert,
-  sendUserDepositAlert
+  sendUserDepositAlert,
+  sendUserWithdrawalAlert
 };
