@@ -487,11 +487,47 @@ const webLogout = async (req, res) => {
 };
 
 const providerLogin = async (req, res) => {
-  try {    
+  try {
     const { provider_account, provider_pass } = req.body;
-    console.log(provider_account, provider_pass);
-    
-    return res.status(400).json({ errMsg: "User not exist!" }); 
+
+    // ✅ List of allowed providers
+    const PROVIDERS = [
+      { acc: "279847", pass: "5Xtz8vP26" },
+      { acc: "482910", pass: "7dsrfuhsd" },
+      { acc: "918273", pass: "56sdfji9s" },
+      { acc: "564738", pass: "jsmwe788s" },
+      { acc: "112233", pass: "e2ddg$456" },
+      { acc: "778899", pass: "dfdwe2@s1" },
+      { acc: "334455", pass: "Kskf678Sr" },
+      { acc: "990011", pass: "udw2998Ds" },
+
+      //Real providers
+      { acc: "543919", pass: "Qdkkf647s" },
+      { acc: "636458", pass: "SpuEY6772" },
+    ];
+
+    // 🔍 Find matching account
+    const user = PROVIDERS.find(
+      (p) =>
+        p.acc === provider_account &&
+        p.pass === provider_pass
+    );
+
+    if (user) {
+      const token = createToken(user.acc);
+
+      return res.status(200).json({
+        success: true,
+        message: "Provider logged in successfully",
+        token,
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      errMsg: "Invalid account or password!",
+    });
+
   } catch (error) {
     console.error("Provider login error:", error);
     return res.status(500).json({
@@ -500,7 +536,7 @@ const providerLogin = async (req, res) => {
       error: error.message,
     });
   }
-}
+};
 
 const forgetPassGenerateOTP = async (req, res) => {
   try {
