@@ -6,7 +6,7 @@ const {sendUserDepositAlert,sendUserWithdrawalAlert } =require("../../controller
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const { depositSuccessMail,withdrawalRequestMail } = require("../../assets/html/transactional")
-
+const APP_NAME = process.env.APP_NAME
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 // Function to create a new TronWeb instance
@@ -202,9 +202,9 @@ const trc20CheckAndTransferPayment = async (req, res) => {
 
       if (updatedUserData?.email) {
         await resend.emails.send({
-          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+          from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
           to: updatedUserData.email,
-          subject: "Deposit Confirmed — 4xMeta",
+          subject: `Deposit Confirmed — ${APP_NAME}`,
           html: depositSuccessMail({
             userName:      updatedUserData.first_name || updatedUserData.telegram?.first_name || "User",
             amount:        amountToCredit,
@@ -442,9 +442,9 @@ const bep20CheckAndTransferPayment = async (req,res) => {
 
             if (updatedUserData?.email) {
               await resend.emails.send({
-                from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+                from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
                 to: updatedUserData.email,
-                subject: "Deposit Confirmed — 4xMeta",
+                subject: `Deposit Confirmed — ${APP_NAME}`,
                 html: depositSuccessMail({
                   userName:      updatedUserData.first_name || updatedUserData.telegram?.first_name || "User",
                   amount:        amountToCredit,
@@ -563,9 +563,9 @@ const withdrawFromMainWallet = async (req, res) => {
       // const user = await userModel.findById(req.user._id).select("wallets is_blocked email first_name");
     
       await resend.emails.send({
-        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
         to: req.user.email, // req.user has full user from auth middleware
-        subject: "Withdrawal Request Submitted — 4xMeta",
+        subject: `Withdrawal Request Submitted — ${APP_NAME}`,
         html: withdrawalRequestMail({
           userName:         req.user.first_name || req.user.telegram?.first_name || "User",
           amount:           amount,

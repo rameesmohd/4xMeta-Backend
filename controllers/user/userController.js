@@ -19,7 +19,7 @@ const { cleanupFiles } = require('../../config/multer');
 const truthy = (v) => v === true || v === "true" || v === "1" || v === 1;
 const isEmail = (s) => typeof s === "string" && s.includes("@");
 const isDigits = (s) => typeof s === "string" && /^\d{5,15}$/.test(s);
-
+const APP_NAME = process.env.APP_NAME
 
 const fetchUserWallet = async (req, res) => {
   try {
@@ -337,7 +337,7 @@ const handleEmailVerificationOtp = async (req, res) => {
 
       // send email using resend
       await resend.emails.send({
-        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
         to: user.email,
         subject: "Verify Your Email",
         html: verification(randomOtp, user.first_name ? user.first_name : user.telegram.first_name),
@@ -629,7 +629,7 @@ const callbackRequestSubmit = async (req, res) => {
         }
 
         await resend.emails.send({
-            from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+            from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
             to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com", 
             subject: "New Contact Form Submission",
             html: `
@@ -790,9 +790,9 @@ const registerProvider = async (req, res) => {
     pushAtt("profitableProof", "PROOF");
 
     await resend.emails.send({
-      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
       to: process.env.SUPPORT_MAIL || "rameesmohd789@gmail.com",
-      subject: "New Strategy Provider Registration",
+      subject: `New Strategy Provider Registration — ${APP_NAME}`,
       html,
       attachments, // remove if you don’t want attachments
     });

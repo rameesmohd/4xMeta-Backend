@@ -11,6 +11,7 @@ const { fetchAndUseLatestRollover } = require("../rolloverController");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const { investmentMail } = require("../../assets/html/transactional")
+const APP_NAME = process.env.APP_NAME
 const toTwoDecimals = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return 0;
@@ -178,9 +179,9 @@ const makeInvestment = async (req, res) => {
 
       if (user.email) {
         await resend.emails.send({
-          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+          from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
           to: user.email,
-          subject: "Investment Confirmed — 4xMeta",
+          subject: `Investment Confirmed — ${APP_NAME}`,
           html: investmentMail({
             userName:        user.first_name || user.telegram?.first_name || "User",
             amount:          amount,

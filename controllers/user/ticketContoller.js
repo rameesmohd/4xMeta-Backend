@@ -7,6 +7,7 @@ const { uploadToCloudinary } = cloudinary;
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const { ticketSubmittedMail } = require("../../assets/html/transactional")
+const APP_NAME = process.env.APP_NAME
 
 const submitTicket = async (req, res) => {
   const localFiles = req.files || [];
@@ -57,7 +58,7 @@ const submitTicket = async (req, res) => {
 
     if (req.user.email) {
       await resend.emails.send({
-        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
         to: req.user.email,
         subject: `Support Ticket Received — ${ticket.ticket_id}`,
         html: ticketSubmittedMail({

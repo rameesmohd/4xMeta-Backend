@@ -15,6 +15,7 @@ const createToken = (userId) => {
         { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 };
+const APP_NAME = process.env.APP_NAME
 
 async function generateUniqueWebUserId() {
   while (true) {
@@ -127,9 +128,9 @@ const registerWebUser = async (req, res) => {
     await session.commitTransaction();
 
     await resend.emails.send({
-      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
       to: createdUser.email,
-      subject: "Welcome to 4xMeta",
+      subject: `Welcome to ${APP_NAME}`,
       html: welcomeMail({
         firstName: createdUser.first_name,
         lastName:  createdUser.last_name,
@@ -196,9 +197,9 @@ const registerSendOtp = async (req, res) => {
     });
 
     await resend.emails.send({
-      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
       to: email,
-      subject: "Verify Your Email – 4xMeta",
+      subject: `Verify Your Email – ${APP_NAME}`,
       html: verification(randomOtp, firstName),
     });
 
@@ -295,9 +296,9 @@ const registerVerifyOtp = async (req, res) => {
     await session.commitTransaction();
 
     await resend.emails.send({
-      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
       to: createdUser.email,
-      subject: "Welcome to 4xMeta",
+      subject: `Welcome to ${APP_NAME}`,
       html: welcomeMail({
         firstName: createdUser.first_name,
         lastName: createdUser.last_name,
@@ -357,9 +358,9 @@ const registerResendOtp = async (req, res) => {
     );
 
     await resend.emails.send({
-      from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+      from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
       to: email,
-      subject: "Your new verification code – 4xMeta",
+      subject: `Your new verification code – ${APP_NAME}`,
       html: verification(randomOtp, existing.formData?.firstName || ""),
     });
 
@@ -553,9 +554,9 @@ const forgetPassGenerateOTP = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+        from: `${APP_NAME} <${process.env.WEBSITE_MAIL}>`,
         to: user.email,
-        subject: "Verify email",
+        subject: `Verify email – ${APP_NAME}`,
         html: forgotMail(generateOTP, user.first_name),
       });
     } catch (emailError) {

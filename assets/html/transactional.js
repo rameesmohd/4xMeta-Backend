@@ -1,5 +1,5 @@
 const { emailTemplate } = require("./emailTemplates");
-
+const APP_NAME = process.env.APP_NAME
 /* ─────────────────────────────────────────
    Shared building blocks (same as existing)
 ───────────────────────────────────────── */
@@ -71,9 +71,9 @@ const sectionLabel = (text) => `
 ───────────────────────────────────────── */
 const welcomeMail = ({ firstName, lastName, email, userId }) =>
   emailTemplate(bodyWrap(`
-    ${heading("Welcome to 4xMeta!")}
+    ${heading(`Welcome to ${APP_NAME}!`)}
     ${hi(`${firstName} ${lastName}`)}
-    ${para("Your account has been successfully created. You're now part of the 4xMeta copy trading community — smart, secure, and built for growth.")}
+    ${para(`Your account has been successfully created. You're now part of the ${APP_NAME} copy trading community — smart, secure, and built for growth.`)}
     ${divider()}
     ${sectionLabel("Your Account Details")}
     ${infoRow("Full Name", `${firstName} ${lastName}`)}

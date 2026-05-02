@@ -11,6 +11,7 @@ const { fetchAndUseLatestRollover } = require('../rolloverController')
 const { buildPaginatedQuery } = require('../../controllers/common/buildPaginationQuery')
 const { sendEmailToUser } = require('../../assets/html/verification')
 const bcrypt = require("bcrypt");
+const APP_NAME = process.env.APP_NAME
 
 const fetchUser = async (req, res) => {
   try {
@@ -716,7 +717,7 @@ const sendEmail = async (req, res) => {
 
     try {
         await resend.emails.send({
-          from: `4xMeta <${process.env.WEBSITE_MAIL}>`,
+          from: `{${APP_NAME}} <${process.env.WEBSITE_MAIL}>`,
           to,
           subject,
           html: sendEmailToUser({title,username,desOne,desTwo,desThree}),
