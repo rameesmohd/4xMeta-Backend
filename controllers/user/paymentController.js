@@ -142,7 +142,7 @@ const trc20CheckAndTransferPayment = async (req, res) => {
     console.log("TRC20 balance:", balance);
 
     // If user has enough balance
-    if (balance >= 50) {
+    if (balance >= 10) {
       const amountToCredit = Math.round(balance * 100) / 100;
 
       // Mark deposit as approved
@@ -387,7 +387,7 @@ const bep20CheckAndTransferPayment = async (req,res) => {
         const balance = await getUSDTBEPBalance(pendingPayment.payment_address)
         console.log('balance :',balance);
 
-        if (balance >= 20) {
+        if (balance >= 10) {
             //-------------------------DB_Operations---------------------------//
             const amountToCredit = Math.round(balance * 100) / 100;
 
